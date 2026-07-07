@@ -1,20 +1,26 @@
 import Link from "next/link";
-import { QrCode, Download, Users } from "lucide-react";
+import { QrCode, Download, Users, Save } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { Label } from "@/components/ui/Input";
+import { TagSelect } from "@/components/ui/TagSelect";
+import { updateEventAudience } from "../actions";
 
 export default async function EventDashboardPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
   const { id: eventId } = await params;
+  const { error } = await searchParams;
   const supabase = await createClient();
 
   const { data: event } = await supabase
     .from("eventos")
-    .select("id, nome, descricao, inicio_em, fim_em, raio_metros")
+    .select("id, nome, descricao, inicio_em, fim_em, raio_metros, cursos_alvo, salas_alvo")
     .eq("id", eventId)
     .maybeSingle();
 
@@ -29,6 +35,11 @@ export default async function EventDashboardPage({
     .select("id, momento_id, registrado_em, distancia_m, situacao, alunos(nome_completo, matricula, curso)")
     .eq("evento_id", eventId)
     .order("registrado_em", { ascending: false });
+
+  const { data: alunos } = await supabase.from("alunos").select("curso, sala");
+  const isString = (v: string | null): v is string => Boolean(v);
+  const cursoOptions = [...new Set((alunos ?? []).map((a) => a.curso).filter(isString))].sort();
+  const salaOptions = [...new Set((alunos ?? []).map((a) => a.sala).filter(isString))].sort();
 
   const countByCheckpoint = new Map<string, number>();
   for (const r of records ?? []) {
@@ -62,6 +73,10 @@ export default async function EventDashboardPage({
         }
       />
 
+      {error && (
+        <p className="max-w-2xl rounded-xl bg-red-50 px-3 py-2 text-sm text-unisanta-red">{error}</p>
+      )}
+
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {(checkpoints ?? []).map((cp) => (
           <Card key={cp.id} className="flex flex-col items-center gap-2 p-5 text-center">
@@ -75,6 +90,40 @@ export default async function EventDashboardPage({
           </Card>
         ))}
       </div>
+
+      <Card className="flex flex-col gap-4 p-6">
+        <div>
+          <h2 className="font-medium text-zinc-800">Público-alvo</h2>
+          <p className="text-sm text-zinc-500">
+            Cursos e/ou salas que veem este evento na tela &quot;Eventos&quot;. Sem nenhuma
+            seleção, o evento aparece para todos os alunos.
+          </p>
+        </div>
+        <form action={updateEventAudience.bind(null, eventId)} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <Label>Cursos</Label>
+            <TagSelect
+              name="cursosAlvo"
+              options={cursoOptions}
+              placeholder="Digite um curso e adicione"
+              defaultSelected={event?.cursos_alvo ?? []}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label>Salas</Label>
+            <TagSelect
+              name="salasAlvo"
+              options={salaOptions}
+              placeholder="Digite uma sala e adicione"
+              defaultSelected={event?.salas_alvo ?? []}
+            />
+          </div>
+          <Button type="submit" variant="secondary" className="w-full sm:w-fit">
+            <Save className="h-4 w-4" />
+            Salvar público-alvo
+          </Button>
+        </form>
+      </Card>
 
       <Card className="overflow-hidden">
         <table className="w-full text-left text-sm">

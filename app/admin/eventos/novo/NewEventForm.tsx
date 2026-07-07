@@ -7,6 +7,7 @@ import { createEvent } from "../actions";
 import { Card } from "@/components/ui/Card";
 import { Input, Textarea, Label } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { TagSelect } from "@/components/ui/TagSelect";
 
 const MapPicker = dynamic(() => import("@/components/MapPicker").then((m) => m.MapPicker), {
   ssr: false,
@@ -17,7 +18,15 @@ const MapPicker = dynamic(() => import("@/components/MapPicker").then((m) => m.M
   ),
 });
 
-export function NewEventForm({ error }: { error?: string }) {
+export function NewEventForm({
+  error,
+  cursoOptions,
+  salaOptions,
+}: {
+  error?: string;
+  cursoOptions: string[];
+  salaOptions: string[];
+}) {
   const [latitude, setLatitude] = useState(-23.9608);
   const [longitude, setLongitude] = useState(-46.3336);
   const [radiusMeters, setRadiusMeters] = useState(100);
@@ -78,6 +87,24 @@ export function NewEventForm({ error }: { error?: string }) {
       <input type="hidden" name="latitude" value={latitude} readOnly />
       <input type="hidden" name="longitude" value={longitude} readOnly />
       <input type="hidden" name="radiusMeters" value={radiusMeters} readOnly />
+
+      <Card className="flex flex-col gap-4 p-6">
+        <div>
+          <Label>Público-alvo</Label>
+          <p className="text-xs text-zinc-500">
+            Selecione os cursos e/ou salas que devem ver este evento. Deixe tudo em branco
+            para exibir o evento a todos os alunos.
+          </p>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label>Cursos</Label>
+          <TagSelect name="cursosAlvo" options={cursoOptions} placeholder="Digite um curso e adicione" />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label>Salas</Label>
+          <TagSelect name="salasAlvo" options={salaOptions} placeholder="Digite uma sala e adicione" />
+        </div>
+      </Card>
 
       <Button type="submit" className="w-full">
         Criar evento e definir momentos de presença

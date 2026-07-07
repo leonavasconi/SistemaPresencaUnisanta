@@ -8,6 +8,7 @@ export type EnrollmentInput = {
   institution: string;
   matricula: string;
   course: string;
+  sala: string;
   descriptor: number[];
 };
 
@@ -31,6 +32,7 @@ export async function saveEnrollment(input: EnrollmentInput) {
     instituicao: input.institution,
     matricula: input.matricula,
     curso: input.course,
+    sala: input.sala || null,
     descritor_facial: input.descriptor,
     consentimento_em: now,
     versao_consentimento: CONSENT_VERSION,

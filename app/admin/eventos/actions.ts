@@ -19,6 +19,8 @@ export async function createEvent(formData: FormData) {
   const radiusMeters = Number(formData.get("radiusMeters"));
   const startsAt = String(formData.get("startsAt"));
   const endsAt = String(formData.get("endsAt"));
+  const cursosAlvo = formData.getAll("cursosAlvo").map(String).filter(Boolean);
+  const salasAlvo = formData.getAll("salasAlvo").map(String).filter(Boolean);
 
   const { data, error } = await supabase
     .from("eventos")
@@ -31,6 +33,8 @@ export async function createEvent(formData: FormData) {
       inicio_em: new Date(startsAt).toISOString(),
       fim_em: new Date(endsAt).toISOString(),
       criado_por: user!.id,
+      cursos_alvo: cursosAlvo,
+      salas_alvo: salasAlvo,
     })
     .select("id")
     .single();
@@ -40,6 +44,24 @@ export async function createEvent(formData: FormData) {
   }
 
   redirect(`/admin/eventos/${data.id}/momentos`);
+}
+
+export async function updateEventAudience(eventId: string, formData: FormData) {
+  const supabase = await createClient();
+
+  const cursosAlvo = formData.getAll("cursosAlvo").map(String).filter(Boolean);
+  const salasAlvo = formData.getAll("salasAlvo").map(String).filter(Boolean);
+
+  const { error } = await supabase
+    .from("eventos")
+    .update({ cursos_alvo: cursosAlvo, salas_alvo: salasAlvo })
+    .eq("id", eventId);
+
+  if (error) {
+    redirect(`/admin/eventos/${eventId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath(`/admin/eventos/${eventId}`);
 }
 
 export async function addCheckpoint(eventId: string, formData: FormData) {

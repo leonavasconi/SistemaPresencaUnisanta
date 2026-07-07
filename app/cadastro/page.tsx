@@ -27,6 +27,7 @@ export default function CadastroPage() {
   const [institution, setInstitution] = useState("Unisanta");
   const [matricula, setMatricula] = useState("");
   const [course, setCourse] = useState("");
+  const [sala, setSala] = useState("");
   const [consentChecked, setConsentChecked] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +42,7 @@ export default function CadastroPage() {
       institution,
       matricula,
       course,
+      sala,
       descriptor,
     });
     setSaving(false);
@@ -97,6 +99,11 @@ export default function CadastroPage() {
                 value={course}
                 onChange={(e) => setCourse(e.target.value)}
               />
+              <Input
+                placeholder="Sala/turma (opcional)"
+                value={sala}
+                onChange={(e) => setSala(e.target.value)}
+              />
               <Button type="submit" className="w-full">
                 Continuar
                 <ArrowRight className="h-4 w-4" />
@@ -152,8 +159,8 @@ export default function CadastroPage() {
                 Cadastro concluído! Agora você já pode registrar presença nos eventos
                 lendo o QR Code exibido no local.
               </p>
-              <Button type="button" onClick={() => router.push("/minhas-presencas")} className="w-full">
-                Ver minhas presenças
+              <Button type="button" onClick={() => router.push("/eventos")} className="w-full">
+                Ver eventos
               </Button>
             </div>
           )}

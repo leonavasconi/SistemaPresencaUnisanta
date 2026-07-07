@@ -30,7 +30,7 @@ export async function updateSession(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isAdminRoute = path.startsWith("/admin") && path !== "/admin/entrar";
   const isStudentRoute =
-    ["/cadastro", "/presenca", "/minhas-presencas", "/meus-dados"].some((p) =>
+    ["/cadastro", "/presenca", "/minhas-presencas", "/meus-dados", "/eventos"].some((p) =>
       path.startsWith(p),
     );
 

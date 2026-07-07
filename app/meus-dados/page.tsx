@@ -12,7 +12,7 @@ export default async function MeusDadosPage() {
 
   const { data: student } = await supabase
     .from("alunos")
-    .select("nome_completo, instituicao, matricula, curso, consentimento_em, versao_consentimento")
+    .select("nome_completo, instituicao, matricula, curso, sala, consentimento_em, versao_consentimento")
     .eq("id", user?.id ?? "")
     .maybeSingle();
 
@@ -28,6 +28,7 @@ export default async function MeusDadosPage() {
             <Row label="Instituição" value={student?.instituicao} />
             <Row label="Matrícula" value={student?.matricula} />
             <Row label="Curso" value={student?.curso} />
+            <Row label="Sala/turma" value={student?.sala} />
             <Row label="E-mail" value={user?.email} />
             <Row
               label="Consentimento LGPD"
