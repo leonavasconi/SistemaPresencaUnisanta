@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { Mail, Lock, LogIn } from "lucide-react";
+import { Mail, Lock, UserPlus } from "lucide-react";
 import { AuthCard } from "@/components/AuthCard";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { signIn } from "./actions";
+import { signUp } from "./actions";
 
-export default async function StudentLoginPage({
+export default async function CriarContaPage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>;
@@ -13,26 +13,26 @@ export default async function StudentLoginPage({
   const { error } = await searchParams;
 
   return (
-    <AuthCard title="Área do aluno" subtitle="Entre para registrar sua presença nos eventos">
+    <AuthCard title="Criar conta de aluno" subtitle="Cadastre-se para registrar presença nos eventos">
       {error && (
         <p className="mb-4 rounded-xl bg-red-50 px-3 py-2 text-sm text-unisanta-red">
           {error}
         </p>
       )}
 
-      <form action={signIn} className="flex flex-col gap-3">
+      <form action={signUp} className="flex flex-col gap-3">
         <Input icon={Mail} name="email" type="email" required placeholder="E-mail institucional" />
-        <Input icon={Lock} name="password" type="password" required minLength={6} placeholder="Senha" />
+        <Input icon={Lock} name="password" type="password" required minLength={6} placeholder="Crie uma senha" />
         <Button type="submit" variant="primary" className="w-full">
-          <LogIn className="h-4 w-4" />
-          Entrar
+          <UserPlus className="h-4 w-4" />
+          Criar conta
         </Button>
       </form>
 
       <p className="mt-5 text-center text-sm text-zinc-500">
-        Ainda não tem conta?{" "}
-        <Link href="/criar-conta" className="font-medium text-unisanta-navy hover:underline">
-          Criar conta de aluno
+        Já tem conta?{" "}
+        <Link href="/entrar" className="font-medium text-unisanta-navy hover:underline">
+          Entrar
         </Link>
       </p>
     </AuthCard>
