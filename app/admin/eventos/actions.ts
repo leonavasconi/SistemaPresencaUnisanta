@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { computeCheckpointsForPreset, type CheckpointPreset } from "@/lib/checkpointPresets";
+import { parseSaoPauloDateTime } from "@/lib/datetime";
 
 export async function createEvent(formData: FormData) {
   const supabase = await createClient();
@@ -30,8 +31,8 @@ export async function createEvent(formData: FormData) {
       latitude,
       longitude,
       raio_metros: radiusMeters,
-      inicio_em: new Date(startsAt).toISOString(),
-      fim_em: new Date(endsAt).toISOString(),
+      inicio_em: parseSaoPauloDateTime(startsAt).toISOString(),
+      fim_em: parseSaoPauloDateTime(endsAt).toISOString(),
       criado_por: user!.id,
       cursos_alvo: cursosAlvo,
       salas_alvo: salasAlvo,
@@ -75,8 +76,8 @@ export async function addCheckpoint(eventId: string, formData: FormData) {
   const { error } = await supabase.from("momentos_presenca").insert({
     evento_id: eventId,
     rotulo: label,
-    abre_em: new Date(opensAt).toISOString(),
-    fecha_em: new Date(closesAt).toISOString(),
+    abre_em: parseSaoPauloDateTime(opensAt).toISOString(),
+    fecha_em: parseSaoPauloDateTime(closesAt).toISOString(),
     ordem: orderIndex,
   });
 
@@ -110,8 +111,8 @@ export async function updateCheckpoint(
     .from("momentos_presenca")
     .update({
       rotulo: label,
-      abre_em: new Date(opensAt).toISOString(),
-      fecha_em: new Date(closesAt).toISOString(),
+      abre_em: parseSaoPauloDateTime(opensAt).toISOString(),
+      fecha_em: parseSaoPauloDateTime(closesAt).toISOString(),
     })
     .eq("id", checkpointId);
 
