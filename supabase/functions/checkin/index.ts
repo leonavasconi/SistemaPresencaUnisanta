@@ -8,6 +8,15 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const FACE_MATCH_THRESHOLD = 0.5; // distância euclidiana máxima entre descritores
 const DESCRIPTOR_LENGTH = 128;
 
+// Necessário porque o navegador do aluno chama este domínio (supabase.co) a
+// partir de outra origem (o app Next.js) — sem isso o navegador bloqueia a
+// resposta antes mesmo de o código da página conseguir lê-la.
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
 interface CheckinPayload {
   qrToken: string;
   descriptor: number[];
@@ -37,13 +46,17 @@ function euclideanDistance(a: number[], b: number[]) {
 function reject(reason: string, extra: Record<string, unknown> = {}) {
   return new Response(JSON.stringify({ status: "rejected", reason, ...extra }), {
     status: 200,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...CORS_HEADERS },
   });
 }
 
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: CORS_HEADERS });
+  }
+
   if (req.method !== "POST") {
-    return new Response("Method not allowed", { status: 405 });
+    return new Response("Method not allowed", { status: 405, headers: CORS_HEADERS });
   }
 
   const authHeader = req.headers.get("Authorization") ?? "";
@@ -200,6 +213,6 @@ Deno.serve(async (req) => {
 
   return new Response(
     JSON.stringify({ status: "approved", checkpoint: checkpoint.label }),
-    { status: 200, headers: { "Content-Type": "application/json" } },
+    { status: 200, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
   );
 });
