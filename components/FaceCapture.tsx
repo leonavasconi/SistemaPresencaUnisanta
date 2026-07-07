@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Camera, Loader2 } from "lucide-react";
 import { loadFaceModels, extractFaceDescriptor } from "@/lib/face/models";
+import { Button } from "@/components/ui/Button";
 
 type Status = "loading-models" | "starting-camera" | "ready" | "processing" | "error";
 
@@ -74,7 +76,7 @@ export function FaceCapture({
     <div className="flex flex-col items-center gap-4">
       <p className="text-center text-sm text-zinc-500">{instructions}</p>
 
-      <div className="relative aspect-square w-64 overflow-hidden rounded-2xl bg-zinc-900">
+      <div className="relative aspect-square w-64 overflow-hidden rounded-3xl bg-zinc-900 shadow-inner">
         <video
           ref={videoRef}
           autoPlay
@@ -82,11 +84,22 @@ export function FaceCapture({
           muted
           className="h-full w-full scale-x-[-1] object-cover"
         />
+        {status === "ready" && (
+          <div className="pointer-events-none absolute inset-6 rounded-full border-2 border-dashed border-white/40" />
+        )}
         {status !== "ready" && status !== "processing" && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-center text-xs text-white">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/60 px-4 text-center text-xs text-white">
+            {(status === "loading-models" || status === "starting-camera") && (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            )}
             {status === "loading-models" && "Carregando modelo de reconhecimento facial..."}
             {status === "starting-camera" && "Solicitando acesso à câmera..."}
             {status === "error" && (errorMessage ?? "Erro ao acessar a câmera")}
+          </div>
+        )}
+        {status === "processing" && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+            <Loader2 className="h-6 w-6 animate-spin text-white" />
           </div>
         )}
       </div>
@@ -95,14 +108,15 @@ export function FaceCapture({
         <p className="text-center text-sm text-unisanta-red">{errorMessage}</p>
       )}
 
-      <button
+      <Button
         type="button"
         onClick={handleCapture}
         disabled={status !== "ready"}
-        className="h-11 w-full max-w-64 rounded-lg bg-unisanta-red font-medium text-white transition-colors hover:bg-unisanta-red-dark disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-full max-w-64"
       >
+        <Camera className="h-4 w-4" />
         {status === "processing" ? "Analisando..." : "Capturar rosto"}
-      </button>
+      </Button>
     </div>
   );
 }

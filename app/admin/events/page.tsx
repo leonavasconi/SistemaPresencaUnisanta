@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { Plus, Calendar, ArrowRight, CalendarX } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { PageHeader, Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 
 export default async function AdminEventsPage() {
   const supabase = await createClient();
@@ -10,55 +13,49 @@ export default async function AdminEventsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-unisanta-navy">Eventos</h1>
-        <Link
-          href="/admin/events/new"
-          className="rounded-lg bg-unisanta-red px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-unisanta-red-dark"
-        >
-          + Novo evento
-        </Link>
-      </div>
+      <PageHeader
+        title="Eventos"
+        subtitle="Crie e gerencie os eventos e seus momentos de presença"
+        action={
+          <Link href="/admin/events/new">
+            <Button>
+              <Plus className="h-4 w-4" />
+              Novo evento
+            </Button>
+          </Link>
+        }
+      />
 
-      <div className="overflow-hidden rounded-xl bg-white ring-1 ring-zinc-100">
-        {!events || events.length === 0 ? (
-          <p className="p-6 text-center text-sm text-zinc-500">
-            Nenhum evento cadastrado ainda.
-          </p>
-        ) : (
-          <table className="w-full text-left text-sm">
-            <thead className="bg-zinc-50 text-xs uppercase text-zinc-500">
-              <tr>
-                <th className="px-4 py-3">Evento</th>
-                <th className="px-4 py-3">Início</th>
-                <th className="px-4 py-3">Fim</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {events.map((event) => (
-                <tr key={event.id} className="border-t border-zinc-100">
-                  <td className="px-4 py-3 font-medium text-zinc-800">{event.name}</td>
-                  <td className="px-4 py-3 text-zinc-500">
-                    {new Date(event.starts_at).toLocaleString("pt-BR")}
-                  </td>
-                  <td className="px-4 py-3 text-zinc-500">
-                    {new Date(event.ends_at).toLocaleString("pt-BR")}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/admin/events/${event.id}`}
-                      className="font-medium text-unisanta-navy hover:underline"
-                    >
-                      Ver painel →
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      {!events || events.length === 0 ? (
+        <Card className="flex flex-col items-center gap-3 p-12 text-center">
+          <CalendarX className="h-8 w-8 text-zinc-300" />
+          <p className="text-sm text-zinc-500">Nenhum evento cadastrado ainda.</p>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {events.map((event) => (
+            <Link key={event.id} href={`/admin/events/${event.id}`}>
+              <Card className="flex h-full flex-col gap-3 p-5 transition-shadow hover:shadow-md">
+                <div className="flex items-start justify-between gap-2">
+                  <h2 className="font-semibold text-zinc-800">{event.name}</h2>
+                  <Calendar className="h-4 w-4 shrink-0 text-unisanta-navy" />
+                </div>
+                <div className="mt-auto flex items-center justify-between text-xs text-zinc-500">
+                  <span>
+                    {new Date(event.starts_at).toLocaleDateString("pt-BR")}
+                    {" · "}
+                    {new Date(event.starts_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                  <span className="flex items-center gap-1 font-medium text-unisanta-navy">
+                    Ver painel
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </span>
+                </div>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

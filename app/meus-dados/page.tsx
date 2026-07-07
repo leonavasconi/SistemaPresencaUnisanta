@@ -1,5 +1,7 @@
+import { ShieldAlert, Trash2 } from "lucide-react";
 import { StudentHeader } from "@/components/StudentHeader";
 import { createClient } from "@/lib/supabase/server";
+import { PageHeader, Card } from "@/components/ui/Card";
 import { deleteMyData } from "./actions";
 
 export default async function MeusDadosPage() {
@@ -17,10 +19,10 @@ export default async function MeusDadosPage() {
   return (
     <div className="flex min-h-full flex-1 flex-col bg-zinc-50">
       <StudentHeader />
-      <main className="flex flex-1 flex-col gap-6 px-6 py-8">
-        <h1 className="text-xl font-semibold text-unisanta-navy">Meus dados</h1>
+      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-6 py-8">
+        <PageHeader title="Meus dados" subtitle="Seus dados pessoais e direitos sob a LGPD" />
 
-        <div className="max-w-lg rounded-xl bg-white p-6 ring-1 ring-zinc-100">
+        <Card className="max-w-lg p-6">
           <dl className="flex flex-col gap-3 text-sm">
             <Row label="Nome completo" value={student?.full_name} />
             <Row label="Instituição" value={student?.institution} />
@@ -36,11 +38,14 @@ export default async function MeusDadosPage() {
               }
             />
           </dl>
-        </div>
+        </Card>
 
-        <div className="max-w-lg rounded-xl bg-red-50 p-6 ring-1 ring-red-100">
-          <h2 className="font-medium text-unisanta-red">Excluir meus dados</h2>
-          <p className="mt-1 text-sm text-zinc-600">
+        <div className="max-w-lg rounded-2xl border border-red-100 bg-red-50/60 p-6">
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="h-4.5 w-4.5 text-unisanta-red" />
+            <h2 className="font-medium text-unisanta-red">Excluir meus dados</h2>
+          </div>
+          <p className="mt-2 text-sm text-zinc-600">
             Você pode revogar seu consentimento e solicitar a exclusão dos seus dados
             pessoais e da sua biometria facial a qualquer momento, conforme a LGPD.
             Isso apagará seu nome, matrícula, curso e rosto cadastrado — o histórico de
@@ -49,8 +54,9 @@ export default async function MeusDadosPage() {
           <form action={deleteMyData} className="mt-4">
             <button
               type="submit"
-              className="rounded-lg bg-unisanta-red px-4 py-2 text-sm font-medium text-white hover:bg-unisanta-red-dark"
+              className="flex items-center gap-1.5 rounded-xl bg-gradient-to-b from-unisanta-red to-unisanta-red-dark px-4 py-2.5 text-sm font-medium text-white shadow-sm shadow-red-900/20 transition-all hover:brightness-110"
             >
+              <Trash2 className="h-4 w-4" />
               Excluir meus dados e sair
             </button>
           </form>
@@ -62,7 +68,7 @@ export default async function MeusDadosPage() {
 
 function Row({ label, value }: { label: string; value?: string | null }) {
   return (
-    <div className="flex justify-between gap-4 border-b border-zinc-100 pb-2">
+    <div className="flex justify-between gap-4 border-b border-zinc-100 pb-2 last:border-0 last:pb-0">
       <dt className="text-zinc-500">{label}</dt>
       <dd className="font-medium text-zinc-800">{value ?? "—"}</dd>
     </div>

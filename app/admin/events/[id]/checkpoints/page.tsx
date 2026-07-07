@@ -1,10 +1,20 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 import QRCode from "qrcode";
+import { ArrowRight, Flag, LogIn, Clock3, Plus, Trash2, Save } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { addCheckpoint, applyCheckpointPreset, deleteCheckpoint, updateCheckpoint } from "../../actions";
-import { CHECKPOINT_PRESETS } from "@/lib/checkpointPresets";
+import { CHECKPOINT_PRESETS, type CheckpointPreset } from "@/lib/checkpointPresets";
 import { toDatetimeLocalValue } from "@/lib/datetime";
+import { PageHeader, Card } from "@/components/ui/Card";
+import { Input, Label } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
+
+const PRESET_ICONS: Record<CheckpointPreset, typeof Flag> = {
+  encerramento: Flag,
+  inicio_fim: LogIn,
+  inicio_meio_fim: Clock3,
+};
 
 export default async function CheckpointsPage({
   params,
@@ -45,20 +55,25 @@ export default async function CheckpointsPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-unisanta-navy">
-          Momentos de presença — {event?.name}
-        </h1>
-        <Link href={`/admin/events/${eventId}`} className="text-sm font-medium text-unisanta-navy hover:underline">
-          Ver painel de presença →
-        </Link>
-      </div>
+      <PageHeader
+        title={`Momentos de presença`}
+        subtitle={event?.name}
+        action={
+          <Link
+            href={`/admin/events/${eventId}`}
+            className="flex items-center gap-1 text-sm font-medium text-unisanta-navy hover:underline"
+          >
+            Ver painel de presença
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        }
+      />
 
       {error && (
-        <p className="max-w-2xl rounded-lg bg-red-50 px-3 py-2 text-sm text-unisanta-red">{error}</p>
+        <p className="max-w-2xl rounded-xl bg-red-50 px-3 py-2 text-sm text-unisanta-red">{error}</p>
       )}
 
-      <div className="flex flex-col gap-3 rounded-xl bg-white p-5 ring-1 ring-zinc-100">
+      <Card className="flex flex-col gap-4 p-6">
         <div>
           <h2 className="font-medium text-zinc-800">Quando a presença deve ser registrada?</h2>
           <p className="text-sm text-zinc-500">
@@ -67,119 +82,117 @@ export default async function CheckpointsPage({
           </p>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          {CHECKPOINT_PRESETS.map((preset) => (
-            <form key={preset.key} action={applyPresetWithEvent}>
-              <input type="hidden" name="preset" value={preset.key} />
-              <button
-                type="submit"
-                className="flex h-full w-full flex-col gap-1 rounded-lg border border-zinc-200 p-4 text-left transition-colors hover:border-unisanta-navy hover:bg-unisanta-navy/5"
-              >
-                <span className="font-medium text-unisanta-navy">{preset.title}</span>
-                <span className="text-xs text-zinc-500">{preset.description}</span>
-              </button>
-            </form>
-          ))}
+          {CHECKPOINT_PRESETS.map((preset) => {
+            const Icon = PRESET_ICONS[preset.key];
+            return (
+              <form key={preset.key} action={applyPresetWithEvent}>
+                <input type="hidden" name="preset" value={preset.key} />
+                <button
+                  type="submit"
+                  className="group flex h-full w-full flex-col gap-2 rounded-xl border border-zinc-200 p-4 text-left transition-all hover:border-unisanta-navy hover:bg-unisanta-navy/5 hover:shadow-sm"
+                >
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-unisanta-navy/10 text-unisanta-navy transition-colors group-hover:bg-unisanta-navy group-hover:text-white">
+                    <Icon className="h-4.5 w-4.5" />
+                  </div>
+                  <span className="font-medium text-unisanta-navy">{preset.title}</span>
+                  <span className="text-xs text-zinc-500">{preset.description}</span>
+                </button>
+              </form>
+            );
+          })}
         </div>
-      </div>
+      </Card>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {checkpointsWithQr.map((cp) => (
-          <div key={cp.id} className="flex flex-col gap-4 rounded-xl bg-white p-5 ring-1 ring-zinc-100 sm:flex-row">
+          <Card key={cp.id} className="flex flex-col gap-4 p-5 sm:flex-row">
             <form
               action={updateCheckpoint.bind(null, eventId, cp.id)}
               className="flex flex-1 flex-col gap-3"
             >
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-zinc-500">Rótulo</label>
-                <input name="label" defaultValue={cp.label} required className={inputClass} />
+              <div className="flex flex-col gap-1.5">
+                <Label>Rótulo</Label>
+                <Input name="label" defaultValue={cp.label} required />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-zinc-500">Abre em</label>
-                  <input
+                <div className="flex flex-col gap-1.5">
+                  <Label>Abre em</Label>
+                  <Input
                     name="opensAt"
                     type="datetime-local"
                     required
                     defaultValue={toDatetimeLocalValue(new Date(cp.opens_at))}
-                    className={inputClass}
                   />
                 </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-zinc-500">Fecha em</label>
-                  <input
+                <div className="flex flex-col gap-1.5">
+                  <Label>Fecha em</Label>
+                  <Input
                     name="closesAt"
                     type="datetime-local"
                     required
                     defaultValue={toDatetimeLocalValue(new Date(cp.closes_at))}
-                    className={inputClass}
                   />
                 </div>
               </div>
-              <div className="flex gap-3">
-                <button
-                  type="submit"
-                  className="h-9 flex-1 rounded-lg bg-unisanta-navy text-sm font-medium text-white transition-colors hover:bg-unisanta-navy-dark"
-                >
-                  Salvar alterações
-                </button>
-              </div>
+              <Button type="submit" variant="secondary" className="w-full">
+                <Save className="h-4 w-4" />
+                Salvar alterações
+              </Button>
             </form>
 
-            <div className="flex flex-col items-center gap-2">
+            <div className="flex flex-col items-center gap-2 border-t border-zinc-100 pt-4 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={cp.qrDataUrl} alt={`QR do momento ${cp.label}`} width={140} height={140} />
+              <img src={cp.qrDataUrl} alt={`QR do momento ${cp.label}`} width={140} height={140} className="rounded-lg" />
               <form action={deleteCheckpoint.bind(null, eventId, cp.id)}>
-                <button type="submit" className="text-xs text-unisanta-red hover:underline">
+                <button type="submit" className="flex items-center gap-1 text-xs text-unisanta-red hover:underline">
+                  <Trash2 className="h-3 w-3" />
                   Remover momento
                 </button>
               </form>
             </div>
-          </div>
+          </Card>
         ))}
 
         {checkpointsWithQr.length === 0 && (
-          <p className="col-span-full rounded-xl bg-white p-6 text-center text-sm text-zinc-500 ring-1 ring-zinc-100">
+          <Card className="col-span-full p-8 text-center text-sm text-zinc-500">
             Nenhum momento criado ainda — escolha um modelo acima ou adicione um personalizado abaixo.
-          </p>
+          </Card>
         )}
       </div>
 
-      <details className="max-w-xl rounded-xl bg-white ring-1 ring-zinc-100">
-        <summary className="cursor-pointer select-none px-5 py-4 font-medium text-zinc-700">
-          + Adicionar momento personalizado
-        </summary>
-        <form action={addCheckpointWithEvent} className="flex flex-col gap-3 px-5 pb-5">
-          <input type="hidden" name="orderIndex" value={nextOrderIndex} readOnly />
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-zinc-700">Rótulo</label>
-            <input
-              name="label"
-              required
-              placeholder="Ex: Entrada, Meio da palestra, Encerramento..."
-              className={inputClass}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-zinc-700">Abre em</label>
-              <input name="opensAt" type="datetime-local" required className={inputClass} />
+      <Card className="max-w-xl">
+        <details className="group">
+          <summary className="flex cursor-pointer select-none items-center gap-2 px-5 py-4 font-medium text-zinc-700">
+            <Plus className="h-4 w-4 text-unisanta-navy" />
+            Adicionar momento personalizado
+          </summary>
+          <form action={addCheckpointWithEvent} className="flex flex-col gap-3 px-5 pb-5">
+            <input type="hidden" name="orderIndex" value={nextOrderIndex} readOnly />
+            <div className="flex flex-col gap-1.5">
+              <Label>Rótulo</Label>
+              <Input
+                name="label"
+                required
+                placeholder="Ex: Entrada, Meio da palestra, Encerramento..."
+              />
             </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-zinc-700">Fecha em</label>
-              <input name="closesAt" type="datetime-local" required className={inputClass} />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label>Abre em</Label>
+                <Input name="opensAt" type="datetime-local" required />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>Fecha em</Label>
+                <Input name="closesAt" type="datetime-local" required />
+              </div>
             </div>
-          </div>
-          <button
-            type="submit"
-            className="h-10 rounded-lg bg-unisanta-red font-medium text-white transition-colors hover:bg-unisanta-red-dark"
-          >
-            + Adicionar momento
-          </button>
-        </form>
-      </details>
+            <Button type="submit" className="w-full">
+              <Plus className="h-4 w-4" />
+              Adicionar momento
+            </Button>
+          </form>
+        </details>
+      </Card>
     </div>
   );
 }
-
-const inputClass =
-  "h-11 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-unisanta-navy focus:ring-1 focus:ring-unisanta-navy";

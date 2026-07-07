@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/ui/Card";
 import { NewEventForm } from "./NewEventForm";
 
 export default async function NewEventPage({
@@ -9,7 +10,7 @@ export default async function NewEventPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-semibold text-unisanta-navy">Novo evento</h1>
+      <PageHeader title="Novo evento" subtitle="Defina os dados e o local do evento" />
       <NewEventForm error={error} />
     </div>
   );

@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { Loader2, CheckCircle2, AlertTriangle, XCircle, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getDeviceFingerprint } from "@/lib/device/fingerprint";
 import { FaceCapture } from "@/components/FaceCapture";
+import { PageBackground } from "@/components/ui/PageBackground";
 
 type Stage = "localizando" | "pronto-para-captura" | "enviando" | "aprovado" | "rejeitado" | "erro";
 
@@ -87,44 +89,64 @@ export function CheckinFlow({ token }: { token: string }) {
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50 px-6 py-16">
-      <div className="flex w-full max-w-sm flex-col items-center gap-6 rounded-2xl bg-white p-8 text-center shadow-sm ring-1 ring-zinc-100">
-        <Image src="/logo-unisanta.png" alt="Unisanta" width={64} height={64} />
+    <PageBackground>
+      <div className="flex flex-1 flex-col items-center justify-center px-6 py-16">
+        <div className="flex w-full max-w-sm flex-col items-center gap-6 rounded-3xl border border-zinc-100 bg-white/90 p-8 text-center shadow-xl shadow-zinc-900/5 backdrop-blur-sm">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-white to-zinc-50 shadow-sm ring-1 ring-zinc-100">
+            <Image src="/logo-unisanta.png" alt="Unisanta" width={44} height={44} />
+          </div>
 
-        {stage === "localizando" && <p className="text-sm text-zinc-500">Obtendo sua localização...</p>}
+          {stage === "localizando" && (
+            <div className="flex flex-col items-center gap-3 py-4">
+              <MapPin className="h-8 w-8 animate-pulse text-unisanta-navy" />
+              <p className="text-sm text-zinc-500">Obtendo sua localização...</p>
+            </div>
+          )}
 
-        {stage === "pronto-para-captura" && (
-          <FaceCapture
-            instructions="Confirme sua identidade para registrar presença"
-            onCaptured={handleFaceCaptured}
-          />
-        )}
+          {stage === "pronto-para-captura" && (
+            <FaceCapture
+              instructions="Confirme sua identidade para registrar presença"
+              onCaptured={handleFaceCaptured}
+            />
+          )}
 
-        {stage === "enviando" && <p className="text-sm text-zinc-500">Validando presença...</p>}
+          {stage === "enviando" && (
+            <div className="flex flex-col items-center gap-3 py-4">
+              <Loader2 className="h-8 w-8 animate-spin text-unisanta-navy" />
+              <p className="text-sm text-zinc-500">Validando presença...</p>
+            </div>
+          )}
 
-        {stage === "aprovado" && (
-          <>
-            <div className="text-4xl">✅</div>
-            <p className="font-medium text-zinc-800">Presença registrada com sucesso!</p>
-            <p className="text-sm text-zinc-500">{checkpointLabel}</p>
-          </>
-        )}
+          {stage === "aprovado" && (
+            <>
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50">
+                <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+              </div>
+              <p className="font-medium text-zinc-800">Presença registrada com sucesso!</p>
+              <p className="text-sm text-zinc-500">{checkpointLabel}</p>
+            </>
+          )}
 
-        {stage === "rejeitado" && (
-          <>
-            <div className="text-4xl">⚠️</div>
-            <p className="font-medium text-unisanta-red">Não foi possível registrar</p>
-            <p className="text-sm text-zinc-500">{message}</p>
-          </>
-        )}
+          {stage === "rejeitado" && (
+            <>
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-50">
+                <AlertTriangle className="h-8 w-8 text-amber-600" />
+              </div>
+              <p className="font-medium text-unisanta-red">Não foi possível registrar</p>
+              <p className="text-sm text-zinc-500">{message}</p>
+            </>
+          )}
 
-        {stage === "erro" && (
-          <>
-            <div className="text-4xl">❌</div>
-            <p className="text-sm text-unisanta-red">{message}</p>
-          </>
-        )}
+          {stage === "erro" && (
+            <>
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+                <XCircle className="h-8 w-8 text-unisanta-red" />
+              </div>
+              <p className="text-sm text-unisanta-red">{message}</p>
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </PageBackground>
   );
 }

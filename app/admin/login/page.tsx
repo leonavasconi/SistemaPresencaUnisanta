@@ -1,8 +1,8 @@
+import { Mail, Lock, LogIn } from "lucide-react";
 import { AuthCard } from "@/components/AuthCard";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 import { adminSignIn } from "./actions";
-
-const inputClass =
-  "h-11 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-unisanta-navy focus:ring-1 focus:ring-unisanta-navy";
 
 export default async function AdminLoginPage({
   searchParams,
@@ -14,35 +14,21 @@ export default async function AdminLoginPage({
   return (
     <AuthCard title="Painel do administrador" subtitle="Gestão de eventos e presença">
       {error && (
-        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-unisanta-red">
+        <p className="mb-4 rounded-xl bg-red-50 px-3 py-2 text-sm text-unisanta-red">
           {error}
         </p>
       )}
 
       <form action={adminSignIn} className="flex flex-col gap-3">
-        <input
-          name="email"
-          type="email"
-          required
-          placeholder="E-mail"
-          className={inputClass}
-        />
-        <input
-          name="password"
-          type="password"
-          required
-          placeholder="Senha"
-          className={inputClass}
-        />
-        <button
-          type="submit"
-          className="h-11 rounded-lg bg-unisanta-navy font-medium text-white transition-colors hover:bg-unisanta-navy-dark"
-        >
+        <Input icon={Mail} name="email" type="email" required placeholder="E-mail" />
+        <Input icon={Lock} name="password" type="password" required placeholder="Senha" />
+        <Button type="submit" variant="secondary" className="w-full">
+          <LogIn className="h-4 w-4" />
           Entrar
-        </button>
+        </Button>
       </form>
 
-      <p className="mt-4 text-center text-xs text-zinc-400">
+      <p className="mt-5 text-center text-xs text-zinc-400">
         Contas de administrador são criadas pela equipe de TI da Unisanta.
       </p>
     </AuthCard>
