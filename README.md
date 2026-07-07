@@ -1,36 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sistema de Presença Unisanta
 
-## Getting Started
+Sistema de registro automatizado de presença em eventos acadêmicos, validando
+simultaneamente **quem** (biometria facial), **onde** (geolocalização) e
+**quando** (janela de horário definida pelo organizador), em conformidade com
+a LGPD.
 
-First, run the development server:
+## Stack
+
+- [Next.js](https://nextjs.org) (App Router) + TypeScript + Tailwind CSS
+- [Supabase](https://supabase.com) — Postgres, Auth e Edge Functions
+- [face-api.js](https://github.com/justadudewhohacks/face-api.js) — reconhecimento facial no navegador
+- Leaflet/OpenStreetMap — seleção do local do evento
+- Hospedagem: [Vercel](https://vercel.com)
+
+## Rodando localmente
 
 ```bash
+npm install
+cp .env.local.example .env.local # preencha com as chaves do seu projeto Supabase
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abra [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+O schema do banco está em `supabase/migrations/` e a Edge Function de
+check-in em `supabase/functions/checkin/`. Ambos precisam ser aplicados no
+projeto Supabase (`supabase db push` e `supabase functions deploy checkin`).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Funcionalidades
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Aluno**: cadastro com dados pessoais, consentimento LGPD e biometria facial; check-in por QR Code (geolocalização + selfie); histórico de presenças; exclusão de dados pessoais.
+- **Administrador**: criação de eventos com localização geográfica; momentos de presença customizáveis (início, meio, fim, ou qualquer combinação), cada um com QR Code próprio; painel de acompanhamento em tempo real e exportação em CSV.
