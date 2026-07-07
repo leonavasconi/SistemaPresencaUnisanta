@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+
+  /* Cores extraídas da logo Unisanta */
+  --color-unisanta-red: #da251c;
+  --color-unisanta-red-dark: #b31d16;
+  --color-unisanta-navy: #29166f;
+  --color-unisanta-navy-dark: #1c0f4d;
+  --color-unisanta-navy-light: #4531a0;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --color-unisanta-red: var(--color-unisanta-red);
+  --color-unisanta-red-dark: var(--color-unisanta-red-dark);
+  --color-unisanta-navy: var(--color-unisanta-navy);
+  --color-unisanta-navy-dark: var(--color-unisanta-navy-dark);
+  --color-unisanta-navy-light: var(--color-unisanta-navy-light);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
