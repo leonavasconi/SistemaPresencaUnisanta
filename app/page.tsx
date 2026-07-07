@@ -38,14 +38,14 @@ export default function Home() {
 
           <div className="flex w-full flex-col gap-3">
             <Link
-              href="/login"
+              href="/entrar"
               className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-unisanta-red to-unisanta-red-dark font-medium text-white shadow-sm shadow-red-900/20 transition-all hover:brightness-110 active:brightness-95"
             >
               <GraduationCap className="h-4.5 w-4.5" />
               Sou aluno
             </Link>
             <Link
-              href="/admin/login"
+              href="/admin/entrar"
               className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-unisanta-navy/30 bg-white font-medium text-unisanta-navy transition-colors hover:bg-unisanta-navy hover:text-white hover:border-unisanta-navy"
             >
               <ShieldCheck className="h-4.5 w-4.5" />

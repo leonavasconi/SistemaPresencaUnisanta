@@ -14,25 +14,25 @@ export async function GET(
   const supabase = await createClient();
 
   const { data: records } = await supabase
-    .from("attendance_records")
+    .from("registros_presenca")
     .select(
-      "recorded_at, distance_m, status, event_checkpoints(label), students(full_name, matricula, course)",
+      "registrado_em, distancia_m, situacao, momentos_presenca(rotulo), alunos(nome_completo, matricula, curso)",
     )
-    .eq("event_id", eventId)
-    .order("recorded_at", { ascending: true });
+    .eq("evento_id", eventId)
+    .order("registrado_em", { ascending: true });
 
-  const header = ["Nome", "Matrícula", "Curso", "Momento", "Registrado em", "Distância (m)", "Status"];
+  const header = ["Nome", "Matrícula", "Curso", "Momento", "Registrado em", "Distância (m)", "Situação"];
   const rows = (records ?? []).map((r) => {
-    const student = Array.isArray(r.students) ? r.students[0] : r.students;
-    const checkpoint = Array.isArray(r.event_checkpoints) ? r.event_checkpoints[0] : r.event_checkpoints;
+    const student = Array.isArray(r.alunos) ? r.alunos[0] : r.alunos;
+    const checkpoint = Array.isArray(r.momentos_presenca) ? r.momentos_presenca[0] : r.momentos_presenca;
     return [
-      student?.full_name,
+      student?.nome_completo,
       student?.matricula,
-      student?.course,
-      checkpoint?.label,
-      new Date(r.recorded_at).toLocaleString("pt-BR"),
-      Math.round(r.distance_m),
-      r.status,
+      student?.curso,
+      checkpoint?.rotulo,
+      new Date(r.registrado_em).toLocaleString("pt-BR"),
+      Math.round(r.distancia_m),
+      r.situacao,
     ];
   });
 

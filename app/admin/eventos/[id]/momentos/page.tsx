@@ -30,22 +30,22 @@ export default async function CheckpointsPage({
   const origin = `${headerList.get("x-forwarded-proto") ?? "http"}://${headerList.get("host")}`;
 
   const { data: event } = await supabase
-    .from("events")
-    .select("id, name")
+    .from("eventos")
+    .select("id, nome")
     .eq("id", eventId)
     .maybeSingle();
 
   const { data: checkpoints } = await supabase
-    .from("event_checkpoints")
-    .select("id, label, opens_at, closes_at, order_index, qr_token")
-    .eq("event_id", eventId)
-    .order("order_index", { ascending: true });
+    .from("momentos_presenca")
+    .select("id, rotulo, abre_em, fecha_em, ordem, token_qr")
+    .eq("evento_id", eventId)
+    .order("ordem", { ascending: true });
 
   const checkpointsWithQr = await Promise.all(
     (checkpoints ?? []).map(async (cp) => ({
       ...cp,
-      checkinUrl: `${origin}/checkin/${cp.qr_token}`,
-      qrDataUrl: await QRCode.toDataURL(`${origin}/checkin/${cp.qr_token}`, { margin: 1, width: 220 }),
+      checkinUrl: `${origin}/presenca/${cp.token_qr}`,
+      qrDataUrl: await QRCode.toDataURL(`${origin}/presenca/${cp.token_qr}`, { margin: 1, width: 220 }),
     })),
   );
 
@@ -57,10 +57,10 @@ export default async function CheckpointsPage({
     <div className="flex flex-col gap-6">
       <PageHeader
         title={`Momentos de presença`}
-        subtitle={event?.name}
+        subtitle={event?.nome}
         action={
           <Link
-            href={`/admin/events/${eventId}`}
+            href={`/admin/eventos/${eventId}`}
             className="flex items-center gap-1 text-sm font-medium text-unisanta-navy hover:underline"
           >
             Ver painel de presença
@@ -112,7 +112,7 @@ export default async function CheckpointsPage({
             >
               <div className="flex flex-col gap-1.5">
                 <Label>Rótulo</Label>
-                <Input name="label" defaultValue={cp.label} required />
+                <Input name="label" defaultValue={cp.rotulo} required />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
@@ -121,7 +121,7 @@ export default async function CheckpointsPage({
                     name="opensAt"
                     type="datetime-local"
                     required
-                    defaultValue={toDatetimeLocalValue(new Date(cp.opens_at))}
+                    defaultValue={toDatetimeLocalValue(new Date(cp.abre_em))}
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -130,7 +130,7 @@ export default async function CheckpointsPage({
                     name="closesAt"
                     type="datetime-local"
                     required
-                    defaultValue={toDatetimeLocalValue(new Date(cp.closes_at))}
+                    defaultValue={toDatetimeLocalValue(new Date(cp.fecha_em))}
                   />
                 </div>
               </div>
@@ -142,7 +142,7 @@ export default async function CheckpointsPage({
 
             <div className="flex flex-col items-center gap-2 border-t border-zinc-100 pt-4 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={cp.qrDataUrl} alt={`QR do momento ${cp.label}`} width={140} height={140} className="rounded-lg" />
+              <img src={cp.qrDataUrl} alt={`QR do momento ${cp.rotulo}`} width={140} height={140} className="rounded-lg" />
               <form action={deleteCheckpoint.bind(null, eventId, cp.id)}>
                 <button type="submit" className="flex items-center gap-1 text-xs text-unisanta-red hover:underline">
                   <Trash2 className="h-3 w-3" />

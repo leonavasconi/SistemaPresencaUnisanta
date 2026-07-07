@@ -10,10 +10,10 @@ export default async function MinhasPresencasPage() {
   } = await supabase.auth.getUser();
 
   const { data: records } = await supabase
-    .from("attendance_records")
-    .select("id, recorded_at, event_checkpoints(label, events(name))")
-    .eq("student_id", user?.id ?? "")
-    .order("recorded_at", { ascending: false });
+    .from("registros_presenca")
+    .select("id, registrado_em, momentos_presenca(rotulo, eventos(nome))")
+    .eq("aluno_id", user?.id ?? "")
+    .order("registrado_em", { ascending: false });
 
   return (
     <div className="flex min-h-full flex-1 flex-col bg-zinc-50">
@@ -31,25 +31,25 @@ export default async function MinhasPresencasPage() {
         ) : (
           <div className="flex flex-col gap-3">
             {records.map((r) => {
-              const checkpoint = Array.isArray(r.event_checkpoints)
-                ? r.event_checkpoints[0]
-                : r.event_checkpoints;
-              const event = Array.isArray(checkpoint?.events)
-                ? checkpoint?.events[0]
-                : checkpoint?.events;
+              const checkpoint = Array.isArray(r.momentos_presenca)
+                ? r.momentos_presenca[0]
+                : r.momentos_presenca;
+              const event = Array.isArray(checkpoint?.eventos)
+                ? checkpoint?.eventos[0]
+                : checkpoint?.eventos;
               return (
                 <Card key={r.id} className="flex items-center gap-4 p-4">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50">
                     <CheckCircle2 className="h-5 w-5 text-emerald-600" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium text-zinc-800">{event?.name}</p>
+                    <p className="font-medium text-zinc-800">{event?.nome}</p>
                     <p className="text-xs text-zinc-500">
-                      {new Date(r.recorded_at).toLocaleString("pt-BR")}
+                      {new Date(r.registrado_em).toLocaleString("pt-BR")}
                     </p>
                   </div>
                   <span className="rounded-full bg-unisanta-navy/10 px-2.5 py-1 text-xs font-medium text-unisanta-navy">
-                    {checkpoint?.label}
+                    {checkpoint?.rotulo}
                   </span>
                 </Card>
               );

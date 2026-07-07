@@ -13,46 +13,46 @@ export default async function EventDashboardPage({
   const supabase = await createClient();
 
   const { data: event } = await supabase
-    .from("events")
-    .select("id, name, description, starts_at, ends_at, radius_meters")
+    .from("eventos")
+    .select("id, nome, descricao, inicio_em, fim_em, raio_metros")
     .eq("id", eventId)
     .maybeSingle();
 
   const { data: checkpoints } = await supabase
-    .from("event_checkpoints")
-    .select("id, label, order_index")
-    .eq("event_id", eventId)
-    .order("order_index", { ascending: true });
+    .from("momentos_presenca")
+    .select("id, rotulo, ordem")
+    .eq("evento_id", eventId)
+    .order("ordem", { ascending: true });
 
   const { data: records } = await supabase
-    .from("attendance_records")
-    .select("id, checkpoint_id, recorded_at, distance_m, status, students(full_name, matricula, course)")
-    .eq("event_id", eventId)
-    .order("recorded_at", { ascending: false });
+    .from("registros_presenca")
+    .select("id, momento_id, registrado_em, distancia_m, situacao, alunos(nome_completo, matricula, curso)")
+    .eq("evento_id", eventId)
+    .order("registrado_em", { ascending: false });
 
   const countByCheckpoint = new Map<string, number>();
   for (const r of records ?? []) {
-    countByCheckpoint.set(r.checkpoint_id, (countByCheckpoint.get(r.checkpoint_id) ?? 0) + 1);
+    countByCheckpoint.set(r.momento_id, (countByCheckpoint.get(r.momento_id) ?? 0) + 1);
   }
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title={event?.name ?? ""}
+        title={event?.nome ?? ""}
         subtitle={
           event
-            ? `${new Date(event.starts_at).toLocaleString("pt-BR")} — ${new Date(event.ends_at).toLocaleString("pt-BR")}`
+            ? `${new Date(event.inicio_em).toLocaleString("pt-BR")} — ${new Date(event.fim_em).toLocaleString("pt-BR")}`
             : undefined
         }
         action={
           <div className="flex gap-3">
-            <Link href={`/admin/events/${eventId}/checkpoints`}>
+            <Link href={`/admin/eventos/${eventId}/momentos`}>
               <Button variant="outline">
                 <QrCode className="h-4 w-4" />
                 Momentos / QR
               </Button>
             </Link>
-            <a href={`/admin/events/${eventId}/export`}>
+            <a href={`/admin/eventos/${eventId}/exportar`}>
               <Button>
                 <Download className="h-4 w-4" />
                 Exportar CSV
@@ -71,7 +71,7 @@ export default async function EventDashboardPage({
             <p className="text-2xl font-semibold text-unisanta-navy">
               {countByCheckpoint.get(cp.id) ?? 0}
             </p>
-            <p className="text-xs text-zinc-500">{cp.label}</p>
+            <p className="text-xs text-zinc-500">{cp.rotulo}</p>
           </Card>
         ))}
       </div>
@@ -89,21 +89,21 @@ export default async function EventDashboardPage({
           </thead>
           <tbody>
             {(records ?? []).map((r) => {
-              const checkpoint = checkpoints?.find((c) => c.id === r.checkpoint_id);
-              const student = Array.isArray(r.students) ? r.students[0] : r.students;
+              const checkpoint = checkpoints?.find((c) => c.id === r.momento_id);
+              const student = Array.isArray(r.alunos) ? r.alunos[0] : r.alunos;
               return (
                 <tr key={r.id} className="border-t border-zinc-100 transition-colors hover:bg-zinc-50/70">
-                  <td className="px-4 py-3 font-medium text-zinc-800">{student?.full_name}</td>
+                  <td className="px-4 py-3 font-medium text-zinc-800">{student?.nome_completo}</td>
                   <td className="px-4 py-3 text-zinc-500">{student?.matricula}</td>
                   <td className="px-4 py-3">
                     <span className="rounded-full bg-unisanta-navy/10 px-2.5 py-0.5 text-xs font-medium text-unisanta-navy">
-                      {checkpoint?.label}
+                      {checkpoint?.rotulo}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-zinc-500">
-                    {new Date(r.recorded_at).toLocaleString("pt-BR")}
+                    {new Date(r.registrado_em).toLocaleString("pt-BR")}
                   </td>
-                  <td className="px-4 py-3 text-zinc-500">{Math.round(r.distance_m)} m</td>
+                  <td className="px-4 py-3 text-zinc-500">{Math.round(r.distancia_m)} m</td>
                 </tr>
               );
             })}

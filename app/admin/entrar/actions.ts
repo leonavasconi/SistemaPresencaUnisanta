@@ -11,19 +11,19 @@ export async function adminSignIn(formData: FormData) {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error || !data.user) {
-    redirect(`/admin/login?error=${encodeURIComponent(error?.message ?? "Credenciais inválidas")}`);
+    redirect(`/admin/entrar?error=${encodeURIComponent(error?.message ?? "Credenciais inválidas")}`);
   }
 
   const { data: profile } = await supabase
-    .from("profiles")
+    .from("perfis")
     .select("id")
     .eq("id", data.user.id)
     .maybeSingle();
 
   if (!profile) {
     await supabase.auth.signOut();
-    redirect(`/admin/login?error=${encodeURIComponent("Esta conta não tem acesso ao painel de administrador")}`);
+    redirect(`/admin/entrar?error=${encodeURIComponent("Esta conta não tem acesso ao painel de administrador")}`);
   }
 
-  redirect("/admin/events");
+  redirect("/admin/eventos");
 }

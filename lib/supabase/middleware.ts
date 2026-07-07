@@ -28,29 +28,29 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isAdminRoute = path.startsWith("/admin") && path !== "/admin/login";
+  const isAdminRoute = path.startsWith("/admin") && path !== "/admin/entrar";
   const isStudentRoute =
-    ["/cadastro", "/checkin", "/minhas-presencas", "/meus-dados"].some((p) =>
+    ["/cadastro", "/presenca", "/minhas-presencas", "/meus-dados"].some((p) =>
       path.startsWith(p),
     );
 
   if (isAdminRoute && !user) {
-    return NextResponse.redirect(new URL("/admin/login", request.url));
+    return NextResponse.redirect(new URL("/admin/entrar", request.url));
   }
 
   if (isStudentRoute && !user) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL("/entrar", request.url));
   }
 
   if (isAdminRoute && user) {
     const { data: profile } = await supabase
-      .from("profiles")
+      .from("perfis")
       .select("id")
       .eq("id", user.id)
       .maybeSingle();
 
     if (!profile) {
-      return NextResponse.redirect(new URL("/admin/login", request.url));
+      return NextResponse.redirect(new URL("/admin/entrar", request.url));
     }
   }
 

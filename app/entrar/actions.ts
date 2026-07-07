@@ -11,7 +11,7 @@ export async function signIn(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    redirect(`/login?error=${encodeURIComponent(error.message)}`);
+    redirect(`/entrar?error=${encodeURIComponent(error.message)}`);
   }
 
   redirect("/cadastro");
@@ -25,7 +25,7 @@ export async function signUp(formData: FormData) {
   const { error } = await supabase.auth.signUp({ email, password });
 
   if (error) {
-    redirect(`/login?error=${encodeURIComponent(error.message)}`);
+    redirect(`/entrar?error=${encodeURIComponent(error.message)}`);
   }
 
   redirect("/cadastro");

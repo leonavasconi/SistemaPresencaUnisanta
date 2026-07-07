@@ -10,7 +10,7 @@ export async function createEvent(formData: FormData) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/admin/login");
+  if (!user) redirect("/admin/entrar");
 
   const name = String(formData.get("name"));
   const description = String(formData.get("description") ?? "");
@@ -21,25 +21,25 @@ export async function createEvent(formData: FormData) {
   const endsAt = String(formData.get("endsAt"));
 
   const { data, error } = await supabase
-    .from("events")
+    .from("eventos")
     .insert({
-      name,
-      description,
+      nome: name,
+      descricao: description,
       latitude,
       longitude,
-      radius_meters: radiusMeters,
-      starts_at: new Date(startsAt).toISOString(),
-      ends_at: new Date(endsAt).toISOString(),
-      created_by: user!.id,
+      raio_metros: radiusMeters,
+      inicio_em: new Date(startsAt).toISOString(),
+      fim_em: new Date(endsAt).toISOString(),
+      criado_por: user!.id,
     })
     .select("id")
     .single();
 
   if (error || !data) {
-    redirect(`/admin/events/new?error=${encodeURIComponent(error?.message ?? "Erro ao criar evento")}`);
+    redirect(`/admin/eventos/novo?error=${encodeURIComponent(error?.message ?? "Erro ao criar evento")}`);
   }
 
-  redirect(`/admin/events/${data.id}/checkpoints`);
+  redirect(`/admin/eventos/${data.id}/momentos`);
 }
 
 export async function addCheckpoint(eventId: string, formData: FormData) {
@@ -50,27 +50,27 @@ export async function addCheckpoint(eventId: string, formData: FormData) {
   const closesAt = String(formData.get("closesAt"));
   const orderIndex = Number(formData.get("orderIndex") ?? 0);
 
-  const { error } = await supabase.from("event_checkpoints").insert({
-    event_id: eventId,
-    label,
-    opens_at: new Date(opensAt).toISOString(),
-    closes_at: new Date(closesAt).toISOString(),
-    order_index: orderIndex,
+  const { error } = await supabase.from("momentos_presenca").insert({
+    evento_id: eventId,
+    rotulo: label,
+    abre_em: new Date(opensAt).toISOString(),
+    fecha_em: new Date(closesAt).toISOString(),
+    ordem: orderIndex,
   });
 
   if (error) {
     redirect(
-      `/admin/events/${eventId}/checkpoints?error=${encodeURIComponent(error.message)}`,
+      `/admin/eventos/${eventId}/momentos?error=${encodeURIComponent(error.message)}`,
     );
   }
 
-  revalidatePath(`/admin/events/${eventId}/checkpoints`);
+  revalidatePath(`/admin/eventos/${eventId}/momentos`);
 }
 
 export async function deleteCheckpoint(eventId: string, checkpointId: string) {
   const supabase = await createClient();
-  await supabase.from("event_checkpoints").delete().eq("id", checkpointId);
-  revalidatePath(`/admin/events/${eventId}/checkpoints`);
+  await supabase.from("momentos_presenca").delete().eq("id", checkpointId);
+  revalidatePath(`/admin/eventos/${eventId}/momentos`);
 }
 
 export async function updateCheckpoint(
@@ -85,19 +85,19 @@ export async function updateCheckpoint(
   const closesAt = String(formData.get("closesAt"));
 
   const { error } = await supabase
-    .from("event_checkpoints")
+    .from("momentos_presenca")
     .update({
-      label,
-      opens_at: new Date(opensAt).toISOString(),
-      closes_at: new Date(closesAt).toISOString(),
+      rotulo: label,
+      abre_em: new Date(opensAt).toISOString(),
+      fecha_em: new Date(closesAt).toISOString(),
     })
     .eq("id", checkpointId);
 
   if (error) {
-    redirect(`/admin/events/${eventId}/checkpoints?error=${encodeURIComponent(error.message)}`);
+    redirect(`/admin/eventos/${eventId}/momentos?error=${encodeURIComponent(error.message)}`);
   }
 
-  revalidatePath(`/admin/events/${eventId}/checkpoints`);
+  revalidatePath(`/admin/eventos/${eventId}/momentos`);
 }
 
 export async function applyCheckpointPreset(eventId: string, formData: FormData) {
@@ -105,44 +105,44 @@ export async function applyCheckpointPreset(eventId: string, formData: FormData)
   const preset = String(formData.get("preset")) as CheckpointPreset;
 
   const { data: event } = await supabase
-    .from("events")
-    .select("starts_at, ends_at")
+    .from("eventos")
+    .select("inicio_em, fim_em")
     .eq("id", eventId)
     .maybeSingle();
 
   if (!event) {
-    redirect(`/admin/events/${eventId}/checkpoints?error=${encodeURIComponent("Evento não encontrado")}`);
+    redirect(`/admin/eventos/${eventId}/momentos?error=${encodeURIComponent("Evento não encontrado")}`);
   }
 
   const { data: lastCheckpoint } = await supabase
-    .from("event_checkpoints")
-    .select("order_index")
-    .eq("event_id", eventId)
-    .order("order_index", { ascending: false })
+    .from("momentos_presenca")
+    .select("ordem")
+    .eq("evento_id", eventId)
+    .order("ordem", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  let nextOrderIndex = (lastCheckpoint?.order_index ?? 0) + 1;
+  let nextOrderIndex = (lastCheckpoint?.ordem ?? 0) + 1;
 
   const checkpoints = computeCheckpointsForPreset(
     preset,
-    new Date(event!.starts_at),
-    new Date(event!.ends_at),
+    new Date(event!.inicio_em),
+    new Date(event!.fim_em),
   );
 
-  const { error } = await supabase.from("event_checkpoints").insert(
+  const { error } = await supabase.from("momentos_presenca").insert(
     checkpoints.map((cp) => ({
-      event_id: eventId,
-      label: cp.label,
-      opens_at: cp.opensAt.toISOString(),
-      closes_at: cp.closesAt.toISOString(),
-      order_index: nextOrderIndex++,
+      evento_id: eventId,
+      rotulo: cp.label,
+      abre_em: cp.opensAt.toISOString(),
+      fecha_em: cp.closesAt.toISOString(),
+      ordem: nextOrderIndex++,
     })),
   );
 
   if (error) {
-    redirect(`/admin/events/${eventId}/checkpoints?error=${encodeURIComponent(error.message)}`);
+    redirect(`/admin/eventos/${eventId}/momentos?error=${encodeURIComponent(error.message)}`);
   }
 
-  revalidatePath(`/admin/events/${eventId}/checkpoints`);
+  revalidatePath(`/admin/eventos/${eventId}/momentos`);
 }

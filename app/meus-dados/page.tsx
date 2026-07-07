@@ -11,8 +11,8 @@ export default async function MeusDadosPage() {
   } = await supabase.auth.getUser();
 
   const { data: student } = await supabase
-    .from("students")
-    .select("full_name, institution, matricula, course, consent_at, consent_version")
+    .from("alunos")
+    .select("nome_completo, instituicao, matricula, curso, consentimento_em, versao_consentimento")
     .eq("id", user?.id ?? "")
     .maybeSingle();
 
@@ -24,16 +24,16 @@ export default async function MeusDadosPage() {
 
         <Card className="max-w-lg p-6">
           <dl className="flex flex-col gap-3 text-sm">
-            <Row label="Nome completo" value={student?.full_name} />
-            <Row label="Instituição" value={student?.institution} />
+            <Row label="Nome completo" value={student?.nome_completo} />
+            <Row label="Instituição" value={student?.instituicao} />
             <Row label="Matrícula" value={student?.matricula} />
-            <Row label="Curso" value={student?.course} />
+            <Row label="Curso" value={student?.curso} />
             <Row label="E-mail" value={user?.email} />
             <Row
               label="Consentimento LGPD"
               value={
-                student?.consent_at
-                  ? `Aceito em ${new Date(student.consent_at).toLocaleString("pt-BR")} (versão ${student.consent_version})`
+                student?.consentimento_em
+                  ? `Aceito em ${new Date(student.consentimento_em).toLocaleString("pt-BR")} (versão ${student.versao_consentimento})`
                   : "Não registrado"
               }
             />
