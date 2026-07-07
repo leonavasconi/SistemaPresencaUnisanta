@@ -1,4 +1,5 @@
-import { CalendarX2, MapPin, Clock } from "lucide-react";
+import Link from "next/link";
+import { CalendarX2, MapPin, Clock, QrCode } from "lucide-react";
 import { StudentHeader } from "@/components/StudentHeader";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/Card";
@@ -8,9 +9,9 @@ function momentoStatus(opensAt: string, closesAt: string) {
   const now = Date.now();
   const opens = new Date(opensAt).getTime();
   const closes = new Date(closesAt).getTime();
-  if (now < opens) return { label: "Em breve", className: "bg-zinc-100 text-zinc-500" };
-  if (now > closes) return { label: "Encerrado", className: "bg-zinc-100 text-zinc-400" };
-  return { label: "Aberto agora", className: "bg-emerald-100 text-emerald-700" };
+  if (now < opens) return { label: "Em breve", className: "bg-zinc-100 text-zinc-500", isOpen: false };
+  if (now > closes) return { label: "Encerrado", className: "bg-zinc-100 text-zinc-400", isOpen: false };
+  return { label: "Aberto agora", className: "bg-emerald-100 text-emerald-700", isOpen: true };
 }
 
 export default async function EventosPage() {
@@ -28,7 +29,7 @@ export default async function EventosPage() {
   const { data: events } = await supabase
     .from("eventos")
     .select(
-      "id, nome, descricao, inicio_em, fim_em, cursos_alvo, salas_alvo, momentos_presenca(id, rotulo, abre_em, fecha_em, ordem)",
+      "id, nome, descricao, inicio_em, fim_em, cursos_alvo, salas_alvo, momentos_presenca(id, rotulo, abre_em, fecha_em, ordem, token_qr)",
     )
     .order("inicio_em", { ascending: false });
 
@@ -72,9 +73,9 @@ export default async function EventosPage() {
                       {momentos.map((momento) => {
                         const status = momentoStatus(momento.abre_em, momento.fecha_em);
                         return (
-                          <div key={momento.id} className="flex items-center justify-between text-sm">
+                          <div key={momento.id} className="flex items-center justify-between gap-3 text-sm">
                             <span className="flex items-center gap-1.5 text-zinc-600">
-                              <Clock className="h-3.5 w-3.5 text-unisanta-navy" />
+                              <Clock className="h-3.5 w-3.5 shrink-0 text-unisanta-navy" />
                               {momento.rotulo}
                               <span className="text-xs text-zinc-400">
                                 ({new Date(momento.abre_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
@@ -82,9 +83,20 @@ export default async function EventosPage() {
                                 {new Date(momento.fecha_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })})
                               </span>
                             </span>
-                            <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${status.className}`}>
-                              {status.label}
-                            </span>
+                            <div className="flex shrink-0 items-center gap-2">
+                              <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${status.className}`}>
+                                {status.label}
+                              </span>
+                              {status.isOpen && (
+                                <Link
+                                  href={`/presenca/${momento.token_qr}`}
+                                  className="flex items-center gap-1 rounded-full bg-unisanta-red px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-unisanta-red-dark"
+                                >
+                                  <QrCode className="h-3 w-3" />
+                                  Registrar presença
+                                </Link>
+                              )}
+                            </div>
                           </div>
                         );
                       })}
@@ -97,8 +109,8 @@ export default async function EventosPage() {
         )}
 
         <p className="text-center text-xs text-zinc-400">
-          Para registrar presença, leia o QR Code exibido no local do evento durante o
-          momento correspondente.
+          Registre presença lendo o QR Code exibido no local, ou pelo botão acima quando o
+          momento estiver aberto.
         </p>
       </main>
     </div>
