@@ -4,11 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import { CONSENT_VERSION } from "@/lib/consent";
 
 export type EnrollmentInput = {
-  fullName: string;
-  institution: string;
-  matricula: string;
-  course: string;
-  sala: string;
   descriptor: number[];
 };
 
@@ -26,17 +21,14 @@ export async function saveEnrollment(input: EnrollmentInput) {
   const now = new Date().toISOString();
   const ip = null; // capturado pelo proxy/edge no futuro, se necessário
 
-  const { error: studentError } = await supabase.from("alunos").upsert({
-    id: user.id,
-    nome_completo: input.fullName,
-    instituicao: input.institution,
-    matricula: input.matricula,
-    curso: input.course,
-    sala: input.sala || null,
-    descritor_facial: input.descriptor,
-    consentimento_em: now,
-    versao_consentimento: CONSENT_VERSION,
-  });
+  const { error: studentError } = await supabase
+    .from("alunos")
+    .update({
+      descritor_facial: input.descriptor,
+      consentimento_em: now,
+      versao_consentimento: CONSENT_VERSION,
+    })
+    .eq("id", user.id);
 
   if (studentError) {
     return { error: studentError.message };

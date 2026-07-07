@@ -7,27 +7,20 @@ import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { FaceCapture } from "@/components/FaceCapture";
 import { PageBackground } from "@/components/ui/PageBackground";
 import { Stepper } from "@/components/ui/Stepper";
-import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { CONSENT_TEXT } from "@/lib/consent";
 import { saveEnrollment } from "./actions";
 
-type Step = "dados" | "consentimento" | "biometria" | "concluido";
+type Step = "consentimento" | "biometria" | "concluido";
 
 const STEPS: { key: Step; label: string }[] = [
-  { key: "dados", label: "Dados" },
   { key: "consentimento", label: "Consentimento" },
   { key: "biometria", label: "Rosto" },
 ];
 
 export function CadastroWizard() {
   const router = useRouter();
-  const [step, setStep] = useState<Step>("dados");
-  const [fullName, setFullName] = useState("");
-  const [institution, setInstitution] = useState("Unisanta");
-  const [matricula, setMatricula] = useState("");
-  const [course, setCourse] = useState("");
-  const [sala, setSala] = useState("");
+  const [step, setStep] = useState<Step>("consentimento");
   const [consentChecked, setConsentChecked] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,14 +30,7 @@ export function CadastroWizard() {
   async function handleFaceCaptured(descriptor: number[]) {
     setSaving(true);
     setError(null);
-    const result = await saveEnrollment({
-      fullName,
-      institution,
-      matricula,
-      course,
-      sala,
-      descriptor,
-    });
+    const result = await saveEnrollment({ descriptor });
     setSaving(false);
 
     if (result.error) {
@@ -66,50 +52,6 @@ export function CadastroWizard() {
           </h1>
 
           {step !== "concluido" && <Stepper steps={STEPS.map((s) => s.label)} currentIndex={stepIndex} />}
-
-          {step === "dados" && (
-            <form
-              className="flex w-full flex-col gap-3"
-              onSubmit={(e) => {
-                e.preventDefault();
-                setStep("consentimento");
-              }}
-            >
-              <Input
-                required
-                placeholder="Nome completo"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-              />
-              <Input
-                required
-                placeholder="Instituição"
-                value={institution}
-                onChange={(e) => setInstitution(e.target.value)}
-              />
-              <Input
-                required
-                placeholder="Matrícula"
-                value={matricula}
-                onChange={(e) => setMatricula(e.target.value)}
-              />
-              <Input
-                required
-                placeholder="Curso"
-                value={course}
-                onChange={(e) => setCourse(e.target.value)}
-              />
-              <Input
-                placeholder="Sala/turma (opcional)"
-                value={sala}
-                onChange={(e) => setSala(e.target.value)}
-              />
-              <Button type="submit" className="w-full">
-                Continuar
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </form>
-          )}
 
           {step === "consentimento" && (
             <div className="flex w-full flex-col gap-4">

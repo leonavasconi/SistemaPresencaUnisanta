@@ -22,7 +22,7 @@ export async function GET(
     .eq("evento_id", eventId)
     .order("registrado_em", { ascending: true });
 
-  const header = ["Nome", "Matrícula", "Curso", "Momento", "Registrado em", "Distância (m)", "Situação"];
+  const header = ["Nome", "RA", "Curso", "Momento", "Registrado em", "Distância (m)", "Situação"];
   const rows = (records ?? []).map((r) => {
     const student = Array.isArray(r.alunos) ? r.alunos[0] : r.alunos;
     const checkpoint = Array.isArray(r.momentos_presenca) ? r.momentos_presenca[0] : r.momentos_presenca;

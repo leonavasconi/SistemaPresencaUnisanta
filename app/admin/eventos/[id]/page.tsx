@@ -131,7 +131,7 @@ export default async function EventDashboardPage({
           <thead className="bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500">
             <tr>
               <th className="px-4 py-3">Aluno</th>
-              <th className="px-4 py-3">Matrícula</th>
+              <th className="px-4 py-3">RA</th>
               <th className="px-4 py-3">Momento</th>
               <th className="px-4 py-3">Registrado em</th>
               <th className="px-4 py-3">Distância</th>

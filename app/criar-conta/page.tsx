@@ -21,6 +21,11 @@ export default async function CriarContaPage({
       )}
 
       <form action={signUp} className="flex flex-col gap-3">
+        <Input name="fullName" required placeholder="Nome completo" />
+        <Input name="institution" required defaultValue="Unisanta" placeholder="Instituição" />
+        <Input name="ra" required placeholder="RA" />
+        <Input name="course" required placeholder="Curso" />
+        <Input name="sala" placeholder="Sala/turma (opcional)" />
         <Input icon={Mail} name="email" type="email" required placeholder="E-mail institucional" />
         <Input icon={Lock} name="password" type="password" required minLength={6} placeholder="Crie uma senha" />
         <Button type="submit" variant="primary" className="w-full">

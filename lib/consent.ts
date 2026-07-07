@@ -1,11 +1,11 @@
-export const CONSENT_VERSION = "2026-07-06";
+export const CONSENT_VERSION = "2026-07-07";
 
 export const CONSENT_TEXT = `
 Ao continuar, você concorda que a Unisanta colete e trate os seguintes dados
 pessoais, exclusivamente para viabilizar o registro automatizado de presença
 em eventos acadêmicos:
 
-• Nome completo, instituição, matrícula e curso.
+• Nome completo, instituição, RA e curso.
 • Um descritor numérico do seu rosto (não a foto), gerado localmente no seu
   aparelho, usado para confirmar sua identidade no momento do check-in.
 • Sua geolocalização (GPS), coletada apenas durante o registro de presença,

@@ -27,7 +27,7 @@ export default async function MeusDadosPage() {
           <dl className="flex flex-col gap-3 text-sm">
             <Row label="Nome completo" value={student?.nome_completo} />
             <Row label="Instituição" value={student?.instituicao} />
-            <Row label="Matrícula" value={student?.matricula} />
+            <Row label="RA" value={student?.matricula} />
             <Row label="Curso" value={student?.curso} />
             <Row label="Sala/turma" value={student?.sala} />
             <Row label="E-mail" value={user?.email} />
@@ -50,7 +50,7 @@ export default async function MeusDadosPage() {
           <p className="mt-2 text-sm text-zinc-600">
             Você pode revogar seu consentimento e solicitar a exclusão dos seus dados
             pessoais e da sua biometria facial a qualquer momento, conforme a LGPD.
-            Isso apagará seu nome, matrícula, curso e rosto cadastrado — o histórico de
+            Isso apagará seu nome, RA, curso e rosto cadastrado — o histórico de
             presenças é mantido de forma anônima para fins de auditoria.
           </p>
           <form action={deleteMyData} className="mt-4">
