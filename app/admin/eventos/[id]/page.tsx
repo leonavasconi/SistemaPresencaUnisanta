@@ -5,6 +5,7 @@ import { PageHeader, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Label } from "@/components/ui/Input";
 import { TagSelect } from "@/components/ui/TagSelect";
+import { formatDateTimeBR } from "@/lib/datetime";
 import { updateEventAudience } from "../actions";
 
 export default async function EventDashboardPage({
@@ -52,7 +53,7 @@ export default async function EventDashboardPage({
         title={event?.nome ?? ""}
         subtitle={
           event
-            ? `${new Date(event.inicio_em).toLocaleString("pt-BR")} — ${new Date(event.fim_em).toLocaleString("pt-BR")}`
+            ? `${formatDateTimeBR(new Date(event.inicio_em))} — ${formatDateTimeBR(new Date(event.fim_em))}`
             : undefined
         }
         action={
@@ -150,7 +151,7 @@ export default async function EventDashboardPage({
                     </span>
                   </td>
                   <td className="px-4 py-3 text-zinc-500">
-                    {new Date(r.registrado_em).toLocaleString("pt-BR")}
+                    {formatDateTimeBR(new Date(r.registrado_em))}
                   </td>
                   <td className="px-4 py-3 text-zinc-500">{Math.round(r.distancia_m)} m</td>
                 </tr>

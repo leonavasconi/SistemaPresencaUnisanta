@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { formatDateTimeBR } from "@/lib/datetime";
 
 function csvEscape(value: unknown): string {
   const str = String(value ?? "");
@@ -30,7 +31,7 @@ export async function GET(
       student?.matricula,
       student?.curso,
       checkpoint?.rotulo,
-      new Date(r.registrado_em).toLocaleString("pt-BR"),
+      formatDateTimeBR(new Date(r.registrado_em)),
       Math.round(r.distancia_m),
       r.situacao,
     ];

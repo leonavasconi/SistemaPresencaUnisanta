@@ -3,6 +3,7 @@ import { Plus, Calendar, ArrowRight, CalendarX } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { formatDateBR, formatTimeBR } from "@/lib/datetime";
 
 export default async function AdminEventsPage() {
   const supabase = await createClient();
@@ -42,9 +43,9 @@ export default async function AdminEventsPage() {
                 </div>
                 <div className="mt-auto flex items-center justify-between text-xs text-zinc-500">
                   <span>
-                    {new Date(event.inicio_em).toLocaleDateString("pt-BR")}
+                    {formatDateBR(new Date(event.inicio_em))}
                     {" · "}
-                    {new Date(event.inicio_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                    {formatTimeBR(new Date(event.inicio_em))}
                   </span>
                   <span className="flex items-center gap-1 font-medium text-unisanta-navy">
                     Ver painel

@@ -2,6 +2,7 @@ import { ShieldAlert, Trash2 } from "lucide-react";
 import { StudentHeader } from "@/components/StudentHeader";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/Card";
+import { formatDateTimeBR } from "@/lib/datetime";
 import { deleteMyData } from "./actions";
 
 export default async function MeusDadosPage() {
@@ -34,7 +35,7 @@ export default async function MeusDadosPage() {
               label="Consentimento LGPD"
               value={
                 student?.consentimento_em
-                  ? `Aceito em ${new Date(student.consentimento_em).toLocaleString("pt-BR")} (versão ${student.versao_consentimento})`
+                  ? `Aceito em ${formatDateTimeBR(new Date(student.consentimento_em))} (versão ${student.versao_consentimento})`
                   : "Não registrado"
               }
             />

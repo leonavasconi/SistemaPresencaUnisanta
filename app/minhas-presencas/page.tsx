@@ -2,6 +2,7 @@ import { CalendarX2, CheckCircle2 } from "lucide-react";
 import { StudentHeader } from "@/components/StudentHeader";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/Card";
+import { formatDateTimeBR } from "@/lib/datetime";
 
 export default async function MinhasPresencasPage() {
   const supabase = await createClient();
@@ -45,7 +46,7 @@ export default async function MinhasPresencasPage() {
                   <div className="flex-1">
                     <p className="font-medium text-zinc-800">{event?.nome}</p>
                     <p className="text-xs text-zinc-500">
-                      {new Date(r.registrado_em).toLocaleString("pt-BR")}
+                      {formatDateTimeBR(new Date(r.registrado_em))}
                     </p>
                   </div>
                   <span className="rounded-full bg-unisanta-navy/10 px-2.5 py-1 text-xs font-medium text-unisanta-navy">

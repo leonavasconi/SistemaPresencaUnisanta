@@ -4,6 +4,7 @@ import { StudentHeader } from "@/components/StudentHeader";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/Card";
 import { eventMatchesAudience } from "@/lib/audience";
+import { formatDateTimeBR, formatTimeBR } from "@/lib/datetime";
 
 function momentoStatus(opensAt: string, closesAt: string) {
   const now = Date.now();
@@ -63,8 +64,8 @@ export default async function EventosPage() {
                     )}
                     <p className="mt-1 flex items-center gap-1.5 text-xs text-zinc-400">
                       <MapPin className="h-3.5 w-3.5" />
-                      {new Date(event.inicio_em).toLocaleString("pt-BR")} —{" "}
-                      {new Date(event.fim_em).toLocaleString("pt-BR")}
+                      {formatDateTimeBR(new Date(event.inicio_em))} —{" "}
+                      {formatDateTimeBR(new Date(event.fim_em))}
                     </p>
                   </div>
 
@@ -78,9 +79,9 @@ export default async function EventosPage() {
                               <Clock className="h-3.5 w-3.5 shrink-0 text-unisanta-navy" />
                               {momento.rotulo}
                               <span className="text-xs text-zinc-400">
-                                ({new Date(momento.abre_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                                ({formatTimeBR(new Date(momento.abre_em))}
                                 {" – "}
-                                {new Date(momento.fecha_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })})
+                                {formatTimeBR(new Date(momento.fecha_em))})
                               </span>
                             </span>
                             <div className="flex shrink-0 items-center gap-2">
