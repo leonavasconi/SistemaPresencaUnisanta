@@ -13,7 +13,7 @@ export default async function AdminEventsPage() {
     .order("inicio_em", { ascending: false });
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-8">
       <PageHeader
         title="Eventos"
         subtitle="Crie e gerencie os eventos e seus momentos de presença"

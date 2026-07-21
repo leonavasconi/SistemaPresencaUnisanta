@@ -17,7 +17,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/95 shadow-sm">
             <Image src="/logo-unisanta.png" alt="Unisanta" width={26} height={26} />
           </div>
-          <span className="font-semibold tracking-tight">Presença — Painel do Administrador</span>
+          <span className="font-semibold tracking-tight">Presença - Painel do Administrador</span>
         </Link>
         {user && (
           <form action={signOutAdmin} className="flex items-center gap-4">
@@ -32,7 +32,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </form>
         )}
       </header>
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6 py-8">{children}</main>
+      <main className="flex flex-1 flex-col">{children}</main>
     </div>
   );
 }
