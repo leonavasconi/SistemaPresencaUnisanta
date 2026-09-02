@@ -25,5 +25,5 @@ export async function adminSignIn(formData: FormData) {
     redirect(`/admin/entrar?error=${encodeURIComponent("Esta conta não tem acesso ao painel de administrador")}`);
   }
 
-  redirect("/admin/eventos");
+  redirect("/admin/events");
 }

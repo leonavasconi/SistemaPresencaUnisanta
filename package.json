@@ -8,9 +8,13 @@
     "start": "next start",
     "lint": "eslint"
   },
+  "overrides": {
+    "uuid": "^11.1.1"
+  },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.110.0",
+    "exceljs": "^4.4.0",
     "face-api.js": "^0.22.2",
     "html5-qrcode": "^2.3.8",
     "leaflet": "^1.9.4",

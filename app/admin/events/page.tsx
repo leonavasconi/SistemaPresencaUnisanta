@@ -18,7 +18,7 @@ export default async function AdminEventsPage() {
         title="Eventos"
         subtitle="Crie e gerencie os eventos e seus momentos de presença"
         action={
-          <Link href="/admin/eventos/novo">
+          <Link href="/admin/events/new">
             <Button>
               <Plus className="h-4 w-4" />
               Novo evento
@@ -35,7 +35,7 @@ export default async function AdminEventsPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {events.map((event) => (
-            <Link key={event.id} href={`/admin/eventos/${event.id}`}>
+            <Link key={event.id} href={`/admin/events/${event.id}`}>
               <Card className="flex h-full flex-col gap-3 p-5 transition-shadow hover:shadow-md">
                 <div className="flex items-start justify-between gap-2">
                   <h2 className="font-semibold text-zinc-800">{event.nome}</h2>
