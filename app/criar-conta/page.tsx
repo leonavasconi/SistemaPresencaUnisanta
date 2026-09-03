@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { signUp } from "./actions";
 
+
 export default async function CriarContaPage({
   searchParams,
 }: {
@@ -27,7 +28,8 @@ export default async function CriarContaPage({
         <Input name="course" required placeholder="Curso" />
         <Input name="sala" placeholder="Sala/turma (opcional)" />
         <Input icon={Mail} name="email" type="email" required placeholder="E-mail institucional" />
-        <Input icon={Lock} name="password" type="password" required minLength={6} placeholder="Crie uma senha" />
+        <Input icon={Lock} name="password"type="password" required minLength={8} pattern="(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}" title="A senha deve ter pelo menos 8 caracteres, 1 número e 1 caractere especial." placeholder="Crie uma senha"/>
+        <Input icon={Lock} name="passwordConfirmation" type="password" required minLength={8} placeholder="Confirme sua senha"/>
         <Button type="submit" variant="primary" className="w-full">
           <UserPlus className="h-4 w-4" />
           Criar conta
