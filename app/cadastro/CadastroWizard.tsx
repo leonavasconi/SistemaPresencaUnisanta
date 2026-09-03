@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
@@ -20,12 +20,22 @@ const STEPS: { key: Step; label: string }[] = [
 
 export function CadastroWizard() {
   const router = useRouter();
+  const consentTextRef = useRef<HTMLDivElement>(null);
   const [step, setStep] = useState<Step>("consentimento");
   const [consentChecked, setConsentChecked] = useState(false);
+  const [scrolledToEnd, setScrolledToEnd] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const stepIndex = STEPS.findIndex((s) => s.key === step);
+
+  function handleScroll() {
+    if (!consentTextRef.current) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = consentTextRef.current;
+    const isAtEnd = scrollHeight - scrollTop - clientHeight < 10;
+    setScrolledToEnd(isAtEnd);
+  }
 
   async function handleFaceCaptured(descriptor: number[]) {
     setSaving(true);
@@ -55,7 +65,11 @@ export function CadastroWizard() {
 
           {step === "consentimento" && (
             <div className="flex w-full flex-col gap-4">
-              <div className="max-h-56 overflow-y-auto whitespace-pre-line rounded-xl bg-zinc-50 p-3 text-xs leading-relaxed text-zinc-600">
+              <div
+                ref={consentTextRef}
+                onScroll={handleScroll}
+                className="max-h-56 overflow-y-auto whitespace-pre-line rounded-xl bg-zinc-50 p-3 text-xs leading-relaxed text-zinc-600"
+              >
                 {CONSENT_TEXT}
               </div>
               <label className="flex items-start gap-2 text-sm text-zinc-700">
@@ -63,13 +77,14 @@ export function CadastroWizard() {
                   type="checkbox"
                   checked={consentChecked}
                   onChange={(e) => setConsentChecked(e.target.checked)}
-                  className="mt-1 accent-unisanta-red"
+                  disabled={!scrolledToEnd}
+                  className="mt-1 accent-unisanta-red disabled:opacity-50"
                 />
                 Li e concordo com o uso dos meus dados conforme descrito acima.
               </label>
               <Button
                 type="button"
-                disabled={!consentChecked}
+                disabled={!consentChecked || !scrolledToEnd}
                 onClick={() => setStep("biometria")}
                 className="w-full"
               >

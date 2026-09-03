@@ -1,9 +1,9 @@
-import { ShieldAlert, Trash2 } from "lucide-react";
+import { ShieldAlert } from "lucide-react";
 import { StudentHeader } from "@/components/StudentHeader";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/Card";
 import { formatDateTimeBR } from "@/lib/datetime";
-import { deleteMyData } from "./actions";
+import { DeleteDataButton } from "./DeleteDataButton";
 
 export default async function MeusDadosPage() {
   const supabase = await createClient();
@@ -53,15 +53,9 @@ export default async function MeusDadosPage() {
             Isso apagará seu nome, RA, curso e rosto cadastrado — o histórico de
             presenças é mantido de forma anônima para fins de auditoria.
           </p>
-          <form action={deleteMyData} className="mt-4">
-            <button
-              type="submit"
-              className="flex items-center gap-1.5 rounded-xl bg-gradient-to-b from-unisanta-red to-unisanta-red-dark px-4 py-2.5 text-sm font-medium text-white shadow-sm shadow-red-900/20 transition-all hover:brightness-110"
-            >
-              <Trash2 className="h-4 w-4" />
-              Excluir meus dados e sair
-            </button>
-          </form>
+          <div className="mt-4">
+            <DeleteDataButton />
+          </div>
         </div>
       </main>
     </div>

@@ -11,6 +11,17 @@ export async function signUp(formData: FormData) {
   const sala = String(formData.get("sala") ?? "");
   const email = String(formData.get("email"));
   const password = String(formData.get("password"));
+  const passwordConfirmation = String(formData.get("passwordConfirmation"));
+
+  if (password !== passwordConfirmation) {
+    redirect(`/criar-conta?error=${encodeURIComponent("As senhas não coincidem.")}`);
+  }
+
+  if (!/^(?=.*[0-9])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/.test(password)) {
+    redirect(
+      `/criar-conta?error=${encodeURIComponent("A senha deve ter pelo menos 8 caracteres, 1 número e 1 caractere especial (!@#$%^&*).")}`,
+    );
+  }
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({ email, password });
