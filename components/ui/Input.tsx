@@ -28,6 +28,19 @@ export const Textarea = forwardRef<
 ));
 Textarea.displayName = "Textarea";
 
-export const Label = ({ children }: { children: React.ReactNode }) => (
-  <label className="text-sm font-medium text-zinc-700">{children}</label>
+export const Label = ({
+  children,
+  required = false,
+}: {
+  children: React.ReactNode;
+  required?: boolean;
+}) => (
+  <label className="text-sm font-medium text-zinc-700">
+    {children}
+    {required && (
+      <span className="ml-0.5 text-unisanta-red" aria-hidden="true">
+        *
+      </span>
+    )}
+  </label>
 );

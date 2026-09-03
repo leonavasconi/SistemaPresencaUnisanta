@@ -38,3 +38,8 @@ export function formatTimeBR(date: Date): string {
     minute: "2-digit",
   });
 }
+
+/** Data no formato AAAA-MM-DD (fuso de Brasília), seguro para usar em nome de arquivo. */
+export function formatDateFileStamp(date: Date): string {
+  return date.toLocaleDateString("sv-SE", { timeZone: TIME_ZONE });
+}
