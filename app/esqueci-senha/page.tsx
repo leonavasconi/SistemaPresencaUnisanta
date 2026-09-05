@@ -1,17 +1,13 @@
-import Link from "next/link";
-import { Mail, Send, MailCheck, ArrowLeft } from "lucide-react";
-import { AuthCard } from "@/components/AuthCard";
-import { Alert } from "@/components/ui/Alert";
-import { Input, Label } from "@/components/ui/Input";
-import { SubmitButton } from "@/components/ui/SubmitButton";
-import { requestPasswordReset } from "./actions";
+"use client";
 
-export default async function EsqueciSenhaPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string; enviado?: string }>;
-}) {
-  const { error, enviado } = await searchParams;
+import { useState } from "react";
+import Link from "next/link";
+import { MailCheck, ArrowLeft } from "lucide-react";
+import { AuthCard } from "@/components/AuthCard";
+import { EsqueciSenhaForm } from "./EsqueciSenhaForm";
+
+export default function EsqueciSenhaPage() {
+  const [enviado, setEnviado] = useState(false);
 
   if (enviado) {
     return (
@@ -44,29 +40,7 @@ export default async function EsqueciSenhaPage({
       title="Esqueci minha senha"
       subtitle="Informe seu e-mail e enviaremos um link para criar uma nova senha."
     >
-      {error && <Alert>{error}</Alert>}
-
-      <form action={requestPasswordReset} className="flex flex-col gap-5">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="email" required>
-            E-mail
-          </Label>
-          <Input
-            id="email"
-            icon={Mail}
-            name="email"
-            type="email"
-            required
-            autoComplete="email"
-            placeholder="nome@dominio.com"
-          />
-        </div>
-
-        <SubmitButton className="w-full">
-          <Send className="h-4 w-4" />
-          Enviar link de redefinição
-        </SubmitButton>
-      </form>
+      <EsqueciSenhaForm onEnviado={() => setEnviado(true)} />
 
       <p className="mt-6 border-t border-zinc-100 pt-5 text-center text-sm text-zinc-500">
         Lembrou a senha?{" "}
