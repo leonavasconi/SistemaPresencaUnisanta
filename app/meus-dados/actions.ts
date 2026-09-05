@@ -12,22 +12,28 @@ export async function deleteMyData() {
   if (!user) redirect("/entrar");
 
   // Apaga dados pessoais e a biometria facial imediatamente. O registro em
-  // `alunos` é mantido (anonimizado) para que o histórico de presenças
+  // `participantes` é mantido (anonimizado) para que o histórico de presenças
   // continue íntegro para fins de auditoria (3.6.c da especificação),
   // conforme a LGPD permite quando há finalidade legítima de retenção.
+  //
+  // RA e curso agora são anuláveis, então podem ser de fato apagados em vez
+  // de substituídos por um valor de fachada. `excluido_em` é o que libera a
+  // constraint que exigiria esses campos de um aluno da Unisanta.
   await supabase
-    .from("alunos")
+    .from("participantes")
     .update({
-      nome_completo: "Aluno removido",
-      matricula: `removido-${user!.id.slice(0, 8)}`,
-      curso: "",
+      nome_completo: "Participante removido",
+      matricula: null,
+      curso: null,
+      sala: null,
+      instituicao: null,
       descritor_facial: [],
       excluido_em: new Date().toISOString(),
     })
     .eq("id", user.id);
 
   await supabase.from("logs_consentimento").insert({
-    aluno_id: user.id,
+    participante_id: user.id,
     versao_consentimento: "n/a",
     acao: "revogado",
   });

@@ -8,7 +8,13 @@ import { Card } from "@/components/ui/Card";
 import { Input, Textarea, Label } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { CheckpointsEditor } from "../_components/CheckpointsEditor";
+import { EventSchedule } from "../_components/EventSchedule";
 import { computeDefaultCheckpoints, validateCheckpointsSchedule, type CheckpointDraft } from "@/lib/checkpoints";
+import {
+  GEOFENCE_POINTS,
+  polygonAreaSquareMeters,
+  validateGeofenceTriangle,
+} from "@/lib/geo/polygon";
 
 const GeofenceMap = dynamic(() => import("@/components/GeofenceMap").then((m) => m.GeofenceMap), {
   ssr: false,
@@ -36,6 +42,17 @@ export function NewEventForm({ error }: { error?: string }) {
     : computeDefaultCheckpoints(startsAt, endsAt);
   const checkpointsError = validateCheckpointsSchedule(visibleCheckpoints, startsAt, endsAt);
 
+  // Mesma validação que o servidor aplica, para o erro aparecer antes do envio.
+  const geofenceError = validateGeofenceTriangle(points);
+  const isFull = points.length >= GEOFENCE_POINTS;
+  const areaM2 = points.length === GEOFENCE_POINTS ? polygonAreaSquareMeters(points) : 0;
+
+  function addPoint(point: GeoPoint) {
+    // O triângulo tem exatamente 3 vértices: depois disso, ajusta-se os que
+    // já existem (arrastando ou editando) em vez de acrescentar mais.
+    setPoints((prev) => (prev.length >= GEOFENCE_POINTS ? prev : [...prev, point]));
+  }
+
   function updatePoint(index: number, key: "lat" | "lng", value: number) {
     setPoints((prev) => prev.map((p, i) => (i === index ? { ...p, [key]: value } : p)));
   }
@@ -53,10 +70,7 @@ export function NewEventForm({ error }: { error?: string }) {
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setPoints((prev) => [
-          ...prev,
-          { lat: position.coords.latitude, lng: position.coords.longitude },
-        ]);
+        addPoint({ lat: position.coords.latitude, lng: position.coords.longitude });
         setLocating(false);
       },
       () => {
@@ -89,28 +103,14 @@ export function NewEventForm({ error }: { error?: string }) {
             <Textarea name="description" />
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
-              <Label required>Início</Label>
-              <Input
-                name="startsAt"
-                type="datetime-local"
-                required
-                value={startsAt}
-                onChange={(e) => setStartsAt(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label required>Fim</Label>
-              <Input
-                name="endsAt"
-                type="datetime-local"
-                required
-                value={endsAt}
-                onChange={(e) => setEndsAt(e.target.value)}
-              />
-            </div>
-          </div>
+          <EventSchedule
+            startsAt={startsAt}
+            endsAt={endsAt}
+            onChange={(inicio, fim) => {
+              setStartsAt(inicio);
+              setEndsAt(fim);
+            }}
+          />
         </Card>
 
         <Card className="flex flex-col gap-3 p-6">
@@ -119,9 +119,10 @@ export function NewEventForm({ error }: { error?: string }) {
               Área do evento<span className="ml-0.5 text-unisanta-red" aria-hidden="true">*</span>
             </h2>
             <p className="text-xs text-zinc-500">
-              Vá até cada canto do local (ex: os 4 cantos de uma sala) e clique em
-              &quot;Adicionar ponto com minha localização&quot;. Os pontos são ligados em ordem,
-              formando o contorno da área liberada para o check-in.
+              Marque 3 (três) pontos no local, por exemplo três cantos da sala: vá até
+              cada um e clique em &quot;Adicionar ponto com minha localização&quot;, ou
+              clique direto no mapa. Eles formam o triângulo dentro do qual o check-in é
+              aceito — quem estiver fora dele não consegue registrar presença.
             </p>
           </div>
 
@@ -130,7 +131,7 @@ export function NewEventForm({ error }: { error?: string }) {
             onPointDrag={(index, lat, lng) =>
               setPoints((prev) => prev.map((p, i) => (i === index ? { lat, lng } : p)))
             }
-            onMapClick={(lat, lng) => setPoints((prev) => [...prev, { lat, lng }])}
+            onMapClick={(lat, lng) => addPoint({ lat, lng })}
           />
 
           {points.length > 0 && (
@@ -172,17 +173,21 @@ export function NewEventForm({ error }: { error?: string }) {
           <button
             type="button"
             onClick={handleAddPointFromLocation}
-            disabled={locating}
-            className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-unisanta-navy/40 py-2.5 text-sm font-medium text-unisanta-navy transition-colors hover:bg-unisanta-navy/5 disabled:opacity-50"
+            disabled={locating || isFull}
+            className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-unisanta-navy/40 py-2.5 text-sm font-medium text-unisanta-navy transition-colors hover:bg-unisanta-navy/5 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-            Adicionar ponto com minha localização
+            {isFull
+              ? `${GEOFENCE_POINTS} pontos marcados`
+              : `Adicionar ponto com minha localização (${points.length}/${GEOFENCE_POINTS})`}
           </button>
 
           {locationError && <p className="text-xs text-unisanta-red">{locationError}</p>}
-          {points.length > 0 && points.length < 3 && (
-            <p className="text-xs text-amber-600">
-              Adicione pelo menos 3 pontos para formar uma área fechada.
+          {geofenceError ? (
+            <p className="text-xs text-amber-600">{geofenceError}</p>
+          ) : (
+            <p className="text-xs text-emerald-700">
+              Área triangular definida — aproximadamente {Math.round(areaM2).toLocaleString("pt-BR")} m².
             </p>
           )}
         </Card>
@@ -197,8 +202,9 @@ export function NewEventForm({ error }: { error?: string }) {
               Momentos de presença<span className="ml-0.5 text-unisanta-red" aria-hidden="true">*</span>
             </h2>
             <p className="text-xs text-zinc-500">
-              Cada momento gera um QR próprio para o check-in. Já sugerimos início, meio e
-              encerramento — edite os horários, remova ou adicione outros conforme a necessidade.
+              Cada momento gera um QR próprio para o check-in. Já sugerimos abertura,
+              desenvolvimento e encerramento — edite os horários, remova ou adicione outros
+              conforme a necessidade.
             </p>
           </div>
           <button
@@ -224,7 +230,7 @@ export function NewEventForm({ error }: { error?: string }) {
       <Button
         type="submit"
         className="w-full sm:w-fit sm:self-end"
-        disabled={points.length < 3 || Boolean(checkpointsError)}
+        disabled={Boolean(geofenceError) || Boolean(checkpointsError)}
       >
         Criar evento
         <ArrowRight className="h-4 w-4" />

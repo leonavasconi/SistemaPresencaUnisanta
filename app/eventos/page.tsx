@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CalendarX2, MapPin, Clock, QrCode } from "lucide-react";
-import { StudentHeader } from "@/components/StudentHeader";
+import { ParticipantHeader } from "@/components/ParticipantHeader";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/Card";
 import { eventMatchesAudience } from "@/lib/audience";
@@ -21,8 +21,8 @@ export default async function EventosPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: student } = await supabase
-    .from("alunos")
+  const { data: participant } = await supabase
+    .from("participantes")
     .select("curso, sala")
     .eq("id", user?.id ?? "")
     .maybeSingle();
@@ -35,12 +35,12 @@ export default async function EventosPage() {
     .order("inicio_em", { ascending: false });
 
   const visibleEvents = (events ?? []).filter((event) =>
-    eventMatchesAudience(event, { curso: student?.curso, sala: student?.sala }),
+    eventMatchesAudience(event, { curso: participant?.curso, sala: participant?.sala }),
   );
 
   return (
     <div className="flex min-h-full flex-1 flex-col bg-zinc-50">
-      <StudentHeader />
+      <ParticipantHeader />
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-6 py-8">
         <PageHeader title="Eventos" subtitle="Eventos disponíveis para você" />
 

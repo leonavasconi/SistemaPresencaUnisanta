@@ -5,7 +5,9 @@ Ao continuar, você concorda que a Unisanta colete e trate os seguintes dados
 pessoais, exclusivamente para viabilizar o registro automatizado de presença
 em eventos acadêmicos:
 
-• Nome completo, instituição, RA e curso.
+• Nome completo e e-mail.
+• Se você se identificou como aluno da Unisanta: também RA e curso.
+  Participantes externos não precisam fornecer esses dados acadêmicos.
 • Um descritor numérico do seu rosto (não a foto), gerado localmente no seu
   aparelho, usado para confirmar sua identidade no momento do check-in.
 • Sua geolocalização (GPS), coletada apenas durante o registro de presença,

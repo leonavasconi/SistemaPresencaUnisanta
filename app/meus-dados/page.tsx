@@ -1,5 +1,5 @@
 import { ShieldAlert } from "lucide-react";
-import { StudentHeader } from "@/components/StudentHeader";
+import { ParticipantHeader } from "@/components/ParticipantHeader";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/Card";
 import { formatDateTimeBR } from "@/lib/datetime";
@@ -11,31 +11,46 @@ export default async function MeusDadosPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: student } = await supabase
-    .from("alunos")
-    .select("nome_completo, instituicao, matricula, curso, sala, consentimento_em, versao_consentimento")
+  const { data: participant } = await supabase
+    .from("participantes")
+    .select(
+      "nome_completo, aluno_unisanta, instituicao, matricula, curso, sala, consentimento_em, versao_consentimento",
+    )
     .eq("id", user?.id ?? "")
     .maybeSingle();
 
+  const isUnisantaStudent = !!participant?.aluno_unisanta;
+
   return (
     <div className="flex min-h-full flex-1 flex-col bg-zinc-50">
-      <StudentHeader />
+      <ParticipantHeader />
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-6 py-8">
         <PageHeader title="Meus dados" subtitle="Seus dados pessoais e direitos sob a LGPD" />
 
         <Card className="max-w-lg p-6">
           <dl className="flex flex-col gap-3 text-sm">
-            <Row label="Nome completo" value={student?.nome_completo} />
-            <Row label="Instituição" value={student?.instituicao} />
-            <Row label="RA" value={student?.matricula} />
-            <Row label="Curso" value={student?.curso} />
-            <Row label="Sala/turma" value={student?.sala} />
+            <Row label="Nome completo" value={participant?.nome_completo} />
             <Row label="E-mail" value={user?.email} />
+            <Row label="Aluno Unisanta" value={isUnisantaStudent ? "Sim" : "Não"} />
+
+            {/* Dados acadêmicos só existem para alunos da Unisanta — para os
+                demais participantes, exibir as linhas vazias só confundiria. */}
+            {isUnisantaStudent && (
+              <>
+                <Row label="Instituição" value={participant?.instituicao} />
+                <Row label="RA" value={participant?.matricula} />
+                <Row label="Curso" value={participant?.curso} />
+                {/* A sala deixou de ser perguntada no cadastro; a linha só
+                    aparece para quem já tinha o dado registrado. */}
+                {participant?.sala && <Row label="Sala/turma" value={participant.sala} />}
+              </>
+            )}
+
             <Row
               label="Consentimento LGPD"
               value={
-                student?.consentimento_em
-                  ? `Aceito em ${formatDateTimeBR(new Date(student.consentimento_em))} (versão ${student.versao_consentimento})`
+                participant?.consentimento_em
+                  ? `Aceito em ${formatDateTimeBR(new Date(participant.consentimento_em))} (versão ${participant.versao_consentimento})`
                   : "Não registrado"
               }
             />
@@ -50,8 +65,8 @@ export default async function MeusDadosPage() {
           <p className="mt-2 text-sm text-zinc-600">
             Você pode revogar seu consentimento e solicitar a exclusão dos seus dados
             pessoais e da sua biometria facial a qualquer momento, conforme a LGPD.
-            Isso apagará seu nome, RA, curso e rosto cadastrado — o histórico de
-            presenças é mantido de forma anônima para fins de auditoria.
+            Isso apagará seu nome, seus dados acadêmicos e o rosto cadastrado — o
+            histórico de presenças é mantido de forma anônima para fins de auditoria.
           </p>
           <div className="mt-4">
             <DeleteDataButton />

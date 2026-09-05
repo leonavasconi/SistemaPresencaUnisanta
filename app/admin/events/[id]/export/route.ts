@@ -39,18 +39,18 @@ export async function GET(
   const { data: records } = await supabase
     .from("registros_presenca")
     .select(
-      "registrado_em, situacao, momentos_presenca(rotulo), alunos(nome_completo, matricula, curso)",
+      "registrado_em, situacao, momentos_presenca(rotulo), participantes(nome_completo, matricula, curso)",
     )
     .eq("evento_id", eventId)
     .order("registrado_em", { ascending: true });
 
   const rows = (records ?? []).map((r) => {
-    const student = Array.isArray(r.alunos) ? r.alunos[0] : r.alunos;
+    const participant = Array.isArray(r.participantes) ? r.participantes[0] : r.participantes;
     const checkpoint = Array.isArray(r.momentos_presenca) ? r.momentos_presenca[0] : r.momentos_presenca;
     return [
-      student?.nome_completo,
-      student?.matricula || "-",
-      student?.curso,
+      participant?.nome_completo,
+      participant?.matricula || "-",
+      participant?.curso,
       checkpoint?.rotulo,
       formatDateTimeBR(new Date(r.registrado_em)),
       r.situacao,
