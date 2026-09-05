@@ -16,8 +16,11 @@ export async function requestPasswordReset(formData: FormData) {
   const origin = `${headerList.get("x-forwarded-proto") ?? "http"}://${headerList.get("host")}`;
 
   const supabase = await createClient();
+  // O template de e-mail acrescenta a este endereço o `token_hash` e o
+  // `type`, e é por isso que ele vai sem query string (ver
+  // app/auth/confirmar/route.ts).
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${origin}/auth/confirmar?proximo=/redefinir-senha`,
+    redirectTo: `${origin}/auth/confirmar`,
   });
 
   // Só erros de infraestrutura (rate limit, SMTP) são mostrados. "E-mail não

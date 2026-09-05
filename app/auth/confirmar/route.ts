@@ -10,10 +10,16 @@ const LINK_INVALIDO = "Este link de redefinição expirou ou já foi usado. Peç
  * redefinição de senha). Troca o código de uso único que veio na URL por uma
  * sessão real e encaminha para a página de destino.
  *
- * Aceita os dois formatos possíveis porque eles dependem do template de
- * e-mail configurado no projeto Supabase:
- *   - `?code=...`                  fluxo PKCE (template com {{ .ConfirmationURL }});
- *   - `?token_hash=...&type=...`   fluxo OTP  (template com {{ .TokenHash }}).
+ * Aceita os dois formatos, porque dependem do template configurado no projeto:
+ *
+ *   - `?token_hash=...&type=...`  é o que o sistema usa. Funciona em qualquer
+ *     navegador, que é o que importa aqui: as pessoas abrem o e-mail no
+ *     celular, num cliente de e-mail, longe de onde pediram a recuperação.
+ *
+ *   - `?code=...` é o fluxo PKCE, mantido só por compatibilidade. Ele exige
+ *     um "code verifier" guardado no navegador que PEDIU a recuperação, então
+ *     falha justamente no caso comum de abrir o e-mail em outro lugar. Se o
+ *     link chegar nesse formato, o template ainda não foi atualizado.
  *
  * Um link expirado, adulterado ou já usado nunca cria sessão: o erro do
  * Supabase é convertido em mensagem e o usuário volta para pedir outro.
@@ -36,36 +42,26 @@ export async function GET(request: Request) {
 
   const supabase = await createClient();
 
-  if (!urlError && code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
-      return NextResponse.redirect(new URL(next, origin));
-    }
-    return NextResponse.redirect(
-      new URL(
-        `/esqueci-senha?error=${encodeURIComponent(traduzErroAuth(error.message, LINK_INVALIDO))}`,
-        origin,
-      ),
-    );
-  }
+  const falha = (mensagem: string) =>
+    NextResponse.redirect(new URL(`/esqueci-senha?error=${encodeURIComponent(mensagem)}`, origin));
 
+  // Caminho principal: independe de qualquer estado no navegador.
   if (!urlError && tokenHash && type) {
     const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
-    if (!error) {
-      return NextResponse.redirect(new URL(next, origin));
-    }
-    return NextResponse.redirect(
-      new URL(
-        `/esqueci-senha?error=${encodeURIComponent(traduzErroAuth(error.message, LINK_INVALIDO))}`,
-        origin,
-      ),
+    if (!error) return NextResponse.redirect(new URL(next, origin));
+    return falha(traduzErroAuth(error.message, LINK_INVALIDO));
+  }
+
+  // Compatibilidade com o template antigo (PKCE). Só conclui se o link for
+  // aberto no mesmo navegador que pediu a recuperação.
+  if (!urlError && code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error) return NextResponse.redirect(new URL(next, origin));
+
+    return falha(
+      "Abra o link no mesmo navegador em que você pediu a recuperação, ou peça um novo link por aqui.",
     );
   }
 
-  return NextResponse.redirect(
-    new URL(
-      `/esqueci-senha?error=${encodeURIComponent(traduzErroAuth(urlError, LINK_INVALIDO))}`,
-      origin,
-    ),
-  );
+  return falha(traduzErroAuth(urlError, LINK_INVALIDO));
 }
