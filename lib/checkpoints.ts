@@ -53,9 +53,16 @@ export function sortCheckpointsByTime<T extends { opensAt: string; closesAt: str
   return [...checkpoints].sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
 }
 
+/**
+ * Nomes dos momentos por posição cronológica. Os três primeiros ganham o
+ * papel que costumam ter num evento; a partir do quarto, volta a numeração,
+ * porque não há um nome natural para "o momento do meio, parte 3".
+ */
+const NOMES_POR_POSICAO = ["Abertura", "Desenvolvimento", "Encerramento"];
+
 /** Rótulo salvo no banco para o momento — não é editável, só indica a posição cronológica. */
 export function checkpointLabel(position: number): string {
-  return `Momento ${position + 1}`;
+  return NOMES_POR_POSICAO[position] ?? `Momento ${position + 1}`;
 }
 
 /**

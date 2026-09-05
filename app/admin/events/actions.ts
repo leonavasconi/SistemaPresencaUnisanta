@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { parseSaoPauloDateTime, toDatetimeLocalValue } from "@/lib/datetime";
 import { haversineMeters } from "@/lib/geo/haversine";
+import { parseGeofencePoints, validateGeofenceTriangle } from "@/lib/geo/polygon";
 import {
   checkpointLabel,
   sortCheckpointsByTime,
@@ -42,17 +43,19 @@ export async function createEvent(formData: FormData) {
   const startsAt = String(formData.get("startsAt"));
   const endsAt = String(formData.get("endsAt"));
 
-  let geofencePoints: { lat: number; lng: number }[] = [];
+  let rawPoints: unknown = [];
   try {
-    geofencePoints = JSON.parse(String(formData.get("geofencePoints") ?? "[]"));
+    rawPoints = JSON.parse(String(formData.get("geofencePoints") ?? "[]"));
   } catch {
-    geofencePoints = [];
+    rawPoints = [];
   }
 
-  if (!Array.isArray(geofencePoints) || geofencePoints.length < 3) {
-    redirect(
-      `/admin/events/new?error=${encodeURIComponent("Adicione pelo menos 3 pontos para definir a área do evento")}`,
-    );
+  // O servidor é a fonte da verdade: mesmo que o formulário deixe passar, a
+  // área precisa ser um triângulo válido antes de virar evento.
+  const geofencePoints = parseGeofencePoints(rawPoints);
+  const geofenceError = validateGeofenceTriangle(geofencePoints);
+  if (geofenceError) {
+    redirect(`/admin/events/new?error=${encodeURIComponent(geofenceError)}`);
   }
 
   const checkpoints = parseCheckpoints(formData);
@@ -61,10 +64,10 @@ export async function createEvent(formData: FormData) {
     redirect(`/admin/events/new?error=${encodeURIComponent(checkpointsError)}`);
   }
 
-  // A Edge Function de check-in ainda valida com centro + raio (círculo), então
-  // derivamos esses dois valores a partir do polígono: o centro é o centroide
-  // dos pontos e o raio cobre o ponto mais distante do centroide — sem margem
-  // extra, já que a área do evento é definida diretamente pelos pontos marcados.
+  // Quem decide o check-in é o triângulo (`pontos_geofence`). Centro e raio
+  // continuam sendo gravados porque as colunas são NOT NULL desde o schema
+  // inicial e alimentam a distância registrada na auditoria — o centro é o
+  // centroide dos pontos e o raio cobre o vértice mais distante dele.
   const latitude = geofencePoints.reduce((sum, p) => sum + p.lat, 0) / geofencePoints.length;
   const longitude = geofencePoints.reduce((sum, p) => sum + p.lng, 0) / geofencePoints.length;
   const maxDistance = Math.max(

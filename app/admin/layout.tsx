@@ -15,7 +15,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <header className="flex items-center justify-between bg-gradient-to-r from-unisanta-navy to-unisanta-navy-dark px-6 py-3 text-white shadow-sm">
         <Link href="/admin/events" className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/95 shadow-sm">
-            <Image src="/logo-unisanta.png" alt="Unisanta" width={26} height={26} />
+            <Image src="/logo-unisanta-marca.png" alt="Unisanta" width={26} height={26} />
           </div>
           <span className="font-semibold tracking-tight">Presença - Painel do Administrador</span>
         </Link>

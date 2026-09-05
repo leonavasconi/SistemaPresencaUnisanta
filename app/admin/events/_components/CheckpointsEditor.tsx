@@ -2,7 +2,7 @@
 
 import { Plus, Trash2 } from "lucide-react";
 import { Input, Label } from "@/components/ui/Input";
-import { sortCheckpointsByTime, type CheckpointDraft } from "@/lib/checkpoints";
+import { checkpointLabel, sortCheckpointsByTime, type CheckpointDraft } from "@/lib/checkpoints";
 
 /**
  * Lista editável de momentos de presença (abre/fecha em), usada tanto na criação do evento
@@ -48,8 +48,14 @@ export function CheckpointsEditor({
             className="flex flex-col gap-3 rounded-xl border border-zinc-200 p-4"
           >
             <div className="flex items-center justify-between gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-unisanta-navy/10 text-xs font-semibold text-unisanta-navy">
-                {position + 1}
+              {/* Número e nome numa etiqueta só. O nome vem da mesma função
+                  que grava o rótulo no banco, então o que o organizador lê
+                  aqui é o que aparece no QR, no painel e na exportação. */}
+              <span className="flex min-w-0 items-center gap-2 rounded-lg bg-unisanta-navy/10 py-1.5 pl-2 pr-3 text-unisanta-navy">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-unisanta-navy/15 text-xs font-semibold">
+                  {position + 1}
+                </span>
+                <span className="truncate text-sm font-medium">{checkpointLabel(position)}</span>
               </span>
               {qr && (
                 // eslint-disable-next-line @next/next/no-img-element

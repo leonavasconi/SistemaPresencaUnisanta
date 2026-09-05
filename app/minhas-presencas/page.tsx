@@ -1,5 +1,5 @@
 import { CalendarX2, CheckCircle2 } from "lucide-react";
-import { StudentHeader } from "@/components/StudentHeader";
+import { ParticipantHeader } from "@/components/ParticipantHeader";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/Card";
 import { formatDateTimeBR } from "@/lib/datetime";
@@ -13,12 +13,12 @@ export default async function MinhasPresencasPage() {
   const { data: records } = await supabase
     .from("registros_presenca")
     .select("id, registrado_em, momentos_presenca(rotulo, eventos(nome))")
-    .eq("aluno_id", user?.id ?? "")
+    .eq("participante_id", user?.id ?? "")
     .order("registrado_em", { ascending: false });
 
   return (
     <div className="flex min-h-full flex-1 flex-col bg-zinc-50">
-      <StudentHeader />
+      <ParticipantHeader />
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-6 py-8">
         <PageHeader title="Minhas presenças" subtitle="Histórico de registros em eventos" />
 

@@ -21,8 +21,8 @@ export async function saveEnrollment(input: EnrollmentInput) {
   const now = new Date().toISOString();
   const ip = null; // capturado pelo proxy/edge no futuro, se necessário
 
-  const { error: studentError } = await supabase
-    .from("alunos")
+  const { error: participanteError } = await supabase
+    .from("participantes")
     .update({
       descritor_facial: input.descriptor,
       consentimento_em: now,
@@ -30,12 +30,12 @@ export async function saveEnrollment(input: EnrollmentInput) {
     })
     .eq("id", user.id);
 
-  if (studentError) {
-    return { error: studentError.message };
+  if (participanteError) {
+    return { error: participanteError.message };
   }
 
   await supabase.from("logs_consentimento").insert({
-    aluno_id: user.id,
+    participante_id: user.id,
     versao_consentimento: CONSENT_VERSION,
     acao: "concedido",
     endereco_ip: ip,

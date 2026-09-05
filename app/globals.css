@@ -32,8 +32,34 @@
   }
 }
 
+/* Entrada suave de blocos que aparecem por condição — hoje, os campos
+   acadêmicos revelados pelo "Você é aluno da Unisanta?". */
+@keyframes revelar {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Quem pede menos movimento no sistema recebe o conteúdo já posicionado. */
+@media (prefers-reduced-motion: reduce) {
+  [class*="animate-"] {
+    animation: none !important;
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /* A Geist é carregada em app/layout.tsx via next/font e exposta como
+     --font-geist-sans. Antes havia um `font-family: Arial` fixo aqui, que
+     anulava esse carregamento e fazia a interface inteira renderizar em
+     Arial. O fallback continua, para o caso de a fonte não carregar. */
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }

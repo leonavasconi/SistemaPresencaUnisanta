@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { ENROLLMENT_COLUMNS, isEnrollmentComplete } from "@/lib/enrollment";
 import { CadastroWizard } from "./CadastroWizard";
 
 export default async function CadastroPage() {
@@ -9,19 +10,15 @@ export default async function CadastroPage() {
   } = await supabase.auth.getUser();
 
   if (user) {
-    const { data: aluno } = await supabase
-      .from("alunos")
-      .select("descritor_facial, excluido_em")
+    // Mesma regra usada pelo middleware (lib/enrollment.ts): quem já concluiu
+    // não precisa repetir o consentimento nem a captura do rosto.
+    const { data: participante } = await supabase
+      .from("participantes")
+      .select(ENROLLMENT_COLUMNS)
       .eq("id", user.id)
       .maybeSingle();
 
-    const isEnrolled =
-      !!aluno &&
-      !aluno.excluido_em &&
-      Array.isArray(aluno.descritor_facial) &&
-      aluno.descritor_facial.length > 0;
-
-    if (isEnrolled) {
+    if (isEnrollmentComplete(participante)) {
       redirect("/eventos");
     }
   }

@@ -32,7 +32,7 @@ export default async function EventDashboardPage({
 
   const { data: records } = await supabase
     .from("registros_presenca")
-    .select("id, momento_id, registrado_em, situacao, alunos(nome_completo, matricula, curso)")
+    .select("id, momento_id, registrado_em, situacao, participantes(nome_completo, matricula, curso)")
     .eq("evento_id", eventId)
     .order("registrado_em", { ascending: false });
 
@@ -135,7 +135,7 @@ export default async function EventDashboardPage({
             <tbody>
               {(records ?? []).map((r) => {
                 const checkpoint = checkpoints?.find((c) => c.id === r.momento_id);
-                const participant = Array.isArray(r.alunos) ? r.alunos[0] : r.alunos;
+                const participant = Array.isArray(r.participantes) ? r.participantes[0] : r.participantes;
                 return (
                   <tr key={r.id} className="border-t border-zinc-100 transition-colors hover:bg-zinc-50/70">
                     <td className="px-4 py-3 font-medium text-zinc-800">{participant?.nome_completo}</td>

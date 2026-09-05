@@ -1,8 +1,11 @@
 import { type InputHTMLAttributes, type TextareaHTMLAttributes, forwardRef } from "react";
 import type { LucideIcon } from "lucide-react";
 
+// `aria-invalid` é o que pinta a borda de erro: assim o estado visual e o
+// estado anunciado por leitores de tela vêm sempre do mesmo atributo, sem
+// chance de um dizer uma coisa e o outro dizer outra.
 const baseClass =
-  "h-11 w-full rounded-xl border border-zinc-200 bg-white px-3.5 text-sm text-zinc-800 placeholder:text-zinc-400 outline-none transition-colors focus:border-unisanta-navy focus:ring-2 focus:ring-unisanta-navy/15";
+  "h-12 w-full rounded-xl border border-zinc-200 bg-white px-3.5 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition-[border-color,box-shadow,background-color] hover:border-zinc-300 focus:border-unisanta-navy focus:ring-4 focus:ring-unisanta-navy/10 disabled:cursor-not-allowed disabled:bg-zinc-50 disabled:text-zinc-400 aria-[invalid=true]:border-unisanta-red aria-[invalid=true]:focus:border-unisanta-red aria-[invalid=true]:focus:ring-unisanta-red/10";
 
 export const Input = forwardRef<
   HTMLInputElement,
@@ -31,11 +34,14 @@ Textarea.displayName = "Textarea";
 export const Label = ({
   children,
   required = false,
+  htmlFor,
 }: {
   children: React.ReactNode;
   required?: boolean;
+  /** Liga o rótulo ao campo — sem isso, clicar no texto não foca o input. */
+  htmlFor?: string;
 }) => (
-  <label className="text-sm font-medium text-zinc-700">
+  <label htmlFor={htmlFor} className="text-sm font-medium text-zinc-700">
     {children}
     {required && (
       <span className="ml-0.5 text-unisanta-red" aria-hidden="true">
