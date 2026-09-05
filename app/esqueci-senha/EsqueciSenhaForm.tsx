@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Mail, Send } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createResetClient } from "@/lib/supabase/reset";
 import { Alert } from "@/components/ui/Alert";
 import { Input, Label } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -12,11 +12,11 @@ import { traduzErroAuth } from "@/lib/auth/errors";
 /**
  * Pedido de recuperação de senha, disparado do NAVEGADOR e não do servidor.
  *
- * Não é preferência de estilo: o `createServerClient` do @supabase/ssr usa
- * PKCE obrigatoriamente, e o PKCE prende o link ao navegador que o pediu —
- * quem abre o e-mail no celular recebe "link expirado". Feito daqui, o
- * cliente usa o fluxo implícito (ver lib/supabase/client.ts) e o link passa a
- * funcionar em qualquer lugar.
+ * Não é preferência de estilo: o @supabase/ssr fixa PKCE nos dois clientes,
+ * e o PKCE prende o link ao navegador que o pediu — quem abre o e-mail no
+ * celular recebe "link expirado". Daqui usamos um cliente à parte, no fluxo
+ * implícito (ver lib/supabase/reset.ts), e o link passa a funcionar em
+ * qualquer lugar.
  *
  * A validação de e-mail é a mesma do resto do sistema (lib/validation/email).
  */
@@ -36,7 +36,7 @@ export function EsqueciSenhaForm({ onEnviado }: { onEnviado: () => void }) {
     }
 
     setEnviando(true);
-    const supabase = createClient();
+    const supabase = createResetClient();
     const { error } = await supabase.auth.resetPasswordForEmail(normalizado, {
       redirectTo: `${window.location.origin}/redefinir-senha`,
     });
