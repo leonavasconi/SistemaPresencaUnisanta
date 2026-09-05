@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -20,7 +19,7 @@ import { Button } from "@/components/ui/Button";
  * token de acesso válido, que não deve ficar no histórico do navegador.
  */
 export function RecuperarSessaoDoLink() {
-  const router = useRouter();
+
   const [falhou, setFalhou] = useState(false);
 
   useEffect(() => {
@@ -44,22 +43,34 @@ export function RecuperarSessaoDoLink() {
 
     const supabase = createClient();
 
-    supabase.auth
-      .setSession({ access_token: accessToken, refresh_token: refreshToken })
-      .then(({ error }) => {
-        if (cancelado) return;
-        if (error) {
-          setFalhou(true);
-          return;
-        }
-        window.history.replaceState(null, "", window.location.pathname);
-        router.refresh();
+    (async () => {
+      const { error } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
       });
+      if (cancelado) return;
+      if (error) {
+        setFalhou(true);
+        return;
+      }
+
+      // Confirma que a sessão já foi para o armazenamento antes de sair
+      // daqui: `setSession` resolve antes de o cookie estar visível, e sem
+      // esta espera o servidor recarregava a página sem enxergá-lo.
+      await supabase.auth.getSession();
+      if (cancelado) return;
+
+      // Navegação de verdade, e não `router.refresh()`: o refresh reaproveita
+      // a árvore já renderizada e chegava ao servidor antes do cookie, o que
+      // deixava a tela presa em "Validando seu link...". `replace` também
+      // tira o fragmento do histórico — ele carrega um token de acesso vivo.
+      window.location.replace(window.location.pathname);
+    })();
 
     return () => {
       cancelado = true;
     };
-  }, [router]);
+  }, []);
 
   if (falhou) {
     return (
