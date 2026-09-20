@@ -53,13 +53,23 @@ o código por sessão e leva a `/redefinir-senha`.
 
 ## Área do evento
 
-A validação de localização usa **3 pontos geográficos formando um triângulo**.
-O organizador marca os três pontos no mapa (ou caminhando até cada um) e o
-check-in só é aceito para quem estiver dentro dessa área — teste de
-point-in-polygon por ray casting, sobre coordenadas projetadas em metros, com
-uma margem para o erro do GPS.
+A validação de localização usa um **polígono de pelo menos 3 pontos** (sem
+máximo) marcado pelo organizador no mapa, ou caminhando até cada ponto — o
+check-in só é aceito para quem estiver dentro dessa área (point-in-polygon
+por ray casting, sobre coordenadas projetadas em metros, com margem para o
+erro do GPS).
 
-Eventos criados antes dessa mudança (ou cujos 3 pontos foram marcados no mesmo
+A área é **opcional na criação do evento** — dá para cadastrar o evento
+adiantado e marcar os pontos depois, presencialmente, pela tela do evento.
+Enquanto a área não estiver definida, o evento fica visível para os
+participantes mas com o check-in bloqueado ("Aguardando local definido").
+
+Áreas podem ser salvas com um nome (ex: "Sala 420A") e reaproveitadas em
+outros eventos, em vez de remarcar os mesmos pontos toda vez; o sistema
+impede salvar a mesma área duas vezes com nomes diferentes, e impede dois
+eventos no mesmo local com horário conflitante.
+
+Eventos criados antes dessa mudança (ou cujos pontos foram marcados no mesmo
 lugar, resultando em área zero) continuam sendo validados pelo círculo
 centro + raio que já usavam.
 
@@ -67,8 +77,11 @@ centro + raio que já usavam.
 
 - **Participante**: cadastro aberto (dados acadêmicos só para alunos Unisanta),
   consentimento LGPD e biometria facial; check-in por QR Code (área do evento +
-  selfie), com presença única por momento; histórico de presenças; recuperação
-  de senha; exclusão dos dados pessoais.
-- **Administrador**: criação de eventos com área triangular; momentos de
-  presença customizáveis, cada um com QR Code próprio; painel de acompanhamento
-  e exportação em CSV/XLSX.
+  selfie), com presença única por momento e opção de tentar novamente em caso
+  de erro; histórico de presenças; recuperação de senha; exclusão dos dados
+  pessoais.
+- **Administrador**: criação de eventos com área opcional (definível depois) e
+  locais reaproveitáveis; QR Code do próprio evento, disponível para download;
+  momentos de presença customizáveis, cada um com QR Code próprio — momentos
+  que já têm presença registrada têm horário e remoção travados; painel de
+  acompanhamento e exportação em CSV/XLSX.
