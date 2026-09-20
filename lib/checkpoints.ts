@@ -53,16 +53,9 @@ export function sortCheckpointsByTime<T extends { opensAt: string; closesAt: str
   return [...checkpoints].sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
 }
 
-/**
- * Nomes dos momentos por posição cronológica. Os três primeiros ganham o
- * papel que costumam ter num evento; a partir do quarto, volta a numeração,
- * porque não há um nome natural para "o momento do meio, parte 3".
- */
-const NOMES_POR_POSICAO = ["Abertura", "Desenvolvimento", "Encerramento"];
-
-/** Rótulo salvo no banco para o momento — não é editável, só indica a posição cronológica. */
+/** Rótulo salvo no banco para o momento — não é editável, só indica a posição cronológica (1 = mais cedo). */
 export function checkpointLabel(position: number): string {
-  return NOMES_POR_POSICAO[position] ?? `Momento ${position + 1}`;
+  return `Momento ${position + 1}`;
 }
 
 /**
@@ -106,6 +99,47 @@ export function validateCheckpointsSchedule(
   for (let i = 1; i < sorted.length; i++) {
     if (parseSaoPauloDateTime(sorted[i].opensAt) < parseSaoPauloDateTime(sorted[i - 1].closesAt)) {
       return "Os momentos não podem se sobrepor nem repetir horário";
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Um momento que já tem presença registrada não pode ter seu horário mudado
+ * nem ser removido — isso reescreveria, de forma confusa, o período em que
+ * aquele check-in realmente aconteceu. Novos momentos só podem ser
+ * adicionados depois do fechamento do último momento já usado, nunca antes
+ * ou entre momentos já usados.
+ */
+export function validateLockedCheckpoints(
+  checkpoints: CheckpointDraft[],
+  locked: (CheckpointDraft & { id: string })[],
+): string | null {
+  if (locked.length === 0) return null;
+
+  for (const lockedCp of locked) {
+    const submitted = checkpoints.find((cp) => cp.id === lockedCp.id);
+    if (!submitted) {
+      return "Não é possível remover um momento que já tem presença registrada.";
+    }
+    if (submitted.opensAt !== lockedCp.opensAt || submitted.closesAt !== lockedCp.closesAt) {
+      return "Não é possível mudar o horário de um momento que já tem presença registrada.";
+    }
+  }
+
+  // Strings "YYYY-MM-DDTHH:mm" comparam corretamente como texto (mesma ordem
+  // cronológica), sem precisar converter para Date aqui.
+  const lockedIds = new Set(locked.map((cp) => cp.id));
+  const lastLockedCloseAt = locked.reduce(
+    (latest, cp) => (cp.closesAt > latest ? cp.closesAt : latest),
+    locked[0].closesAt,
+  );
+
+  for (const cp of checkpoints) {
+    if (cp.id && lockedIds.has(cp.id)) continue;
+    if (cp.opensAt && cp.opensAt < lastLockedCloseAt) {
+      return "Novos momentos só podem começar depois do fechamento do último momento que já tem presença registrada.";
     }
   }
 

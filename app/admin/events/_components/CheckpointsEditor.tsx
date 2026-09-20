@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
+import { Lock, Plus, Trash2 } from "lucide-react";
 import { Input, Label } from "@/components/ui/Input";
 import { checkpointLabel, sortCheckpointsByTime, type CheckpointDraft } from "@/lib/checkpoints";
 
@@ -16,11 +16,14 @@ export function CheckpointsEditor({
   value,
   onChange,
   qrByCheckpointId,
+  lockedCheckpointIds,
 }: {
   name?: string;
   value: CheckpointDraft[];
   onChange: (next: CheckpointDraft[]) => void;
   qrByCheckpointId?: Record<string, { qrDataUrl: string }>;
+  /** Ids de momentos que já têm presença registrada — horário e remoção travados. */
+  lockedCheckpointIds?: Set<string>;
 }) {
   function update(index: number, patch: Partial<CheckpointDraft>) {
     onChange(value.map((cp, i) => (i === index ? { ...cp, ...patch } : cp)));
@@ -42,6 +45,7 @@ export function CheckpointsEditor({
     <div className="flex flex-col gap-3">
       {orderedByTime.map((cp, position) => {
         const qr = cp.id ? qrByCheckpointId?.[cp.id] : undefined;
+        const isLocked = Boolean(cp.id && lockedCheckpointIds?.has(cp.id));
         return (
           <div
             key={cp.id ?? `novo-${cp.index}`}
@@ -67,14 +71,24 @@ export function CheckpointsEditor({
                   className="shrink-0 rounded-lg ring-1 ring-zinc-200"
                 />
               )}
-              <button
-                type="button"
-                onClick={() => remove(cp.index)}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-red-50 hover:text-unisanta-red"
-                aria-label={`Remover momento ${position + 1}`}
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              {isLocked ? (
+                <span
+                  className="flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-zinc-100 px-2.5 text-xs font-medium text-zinc-500"
+                  title="Já tem presença registrada — horário e remoção travados"
+                >
+                  <Lock className="h-3.5 w-3.5" />
+                  Já tem presença
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => remove(cp.index)}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-red-50 hover:text-unisanta-red"
+                  aria-label={`Remover momento ${position + 1}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
@@ -83,6 +97,7 @@ export function CheckpointsEditor({
                   type="datetime-local"
                   value={cp.opensAt}
                   onChange={(e) => update(cp.index, { opensAt: e.target.value })}
+                  disabled={isLocked}
                   required
                 />
               </div>
@@ -92,6 +107,7 @@ export function CheckpointsEditor({
                   type="datetime-local"
                   value={cp.closesAt}
                   onChange={(e) => update(cp.index, { closesAt: e.target.value })}
+                  disabled={isLocked}
                   required
                 />
               </div>
@@ -99,6 +115,7 @@ export function CheckpointsEditor({
           </div>
         );
       })}
+
 
       <button
         type="button"

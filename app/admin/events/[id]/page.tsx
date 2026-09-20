@@ -1,11 +1,16 @@
-import { Download, Users } from "lucide-react";
+import { headers } from "next/headers";
+import Link from "next/link";
+import QRCode from "qrcode";
+import { ArrowLeft, Download, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { formatDateTimeBR, toDatetimeLocalValue } from "@/lib/datetime";
 import { computeDefaultCheckpoints, type CheckpointDraft } from "@/lib/checkpoints";
-import { syncCheckpoints } from "../actions";
+import { parseGeofencePoints } from "@/lib/geo/polygon";
+import { syncCheckpoints, updateEventGeofence, getGeofencePresets } from "../actions";
 import { CheckpointsManager } from "./moments/CheckpointsManager";
+import { GeofencePanel } from "./GeofencePanel";
 
 export default async function EventDashboardPage({
   params,
@@ -17,12 +22,20 @@ export default async function EventDashboardPage({
   const { id: eventId } = await params;
   const { error } = await searchParams;
   const supabase = await createClient();
+  const headerList = await headers();
+  const origin = `${headerList.get("x-forwarded-proto") ?? "http"}://${headerList.get("host")}`;
 
   const { data: event } = await supabase
     .from("eventos")
-    .select("id, nome, descricao, inicio_em, fim_em, raio_metros")
+    .select("id, nome, descricao, inicio_em, fim_em, raio_metros, pontos_geofence")
     .eq("id", eventId)
     .maybeSingle();
+
+  const presets = await getGeofencePresets();
+  const eventQrDataUrl = await QRCode.toDataURL(`${origin}/eventos/${eventId}`, {
+    margin: 1,
+    width: 220,
+  });
 
   const { data: checkpoints } = await supabase
     .from("momentos_presenca")
@@ -53,12 +66,29 @@ export default async function EventDashboardPage({
           event ? toDatetimeLocalValue(new Date(event.fim_em)) : "",
         );
 
+  const lockedCheckpoints = (checkpoints ?? [])
+    .filter((cp) => (countByCheckpoint.get(cp.id) ?? 0) > 0)
+    .map((cp) => ({
+      id: cp.id,
+      opensAt: toDatetimeLocalValue(new Date(cp.abre_em)),
+      closesAt: toDatetimeLocalValue(new Date(cp.fecha_em)),
+    }));
+
   const syncCheckpointsForEvent = syncCheckpoints.bind(null, eventId, `/admin/events/${eventId}`);
+  const updateEventGeofenceForEvent = updateEventGeofence.bind(null, eventId);
   const eventStartsAt = event ? toDatetimeLocalValue(new Date(event.inicio_em)) : "";
   const eventEndsAt = event ? toDatetimeLocalValue(new Date(event.fim_em)) : "";
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-6 py-8">
+      <Link
+        href="/admin/events"
+        className="flex w-fit items-center gap-1.5 text-sm font-medium text-zinc-500 transition-colors hover:text-unisanta-navy"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Voltar para a tela inicial
+      </Link>
+
       <PageHeader
         title={event?.nome ?? ""}
         subtitle={
@@ -91,6 +121,41 @@ export default async function EventDashboardPage({
         <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-unisanta-red">{error}</p>
       )}
 
+      <Card className="flex flex-col items-center gap-3 p-6 text-center sm:flex-row sm:items-center sm:text-left">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={eventQrDataUrl}
+          alt="QR Code do evento"
+          width={140}
+          height={140}
+          className="shrink-0 rounded-xl ring-1 ring-zinc-200"
+        />
+        <div className="flex flex-1 flex-col items-center gap-3 sm:items-start">
+          <div>
+            <h2 className="font-medium text-zinc-800">QR Code do evento</h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              Compartilhe este código para os participantes acessarem a página do evento e
+              registrarem presença nos momentos abertos.
+            </p>
+          </div>
+          {/* Data URL: o navegador baixa direto, sem precisar de rota/JS. */}
+          <a
+            href={eventQrDataUrl}
+            download={`qrcode-evento-${eventId}.png`}
+            className="inline-flex h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl border border-unisanta-navy/30 bg-white px-4 text-sm font-medium text-unisanta-navy transition-all duration-150 hover:bg-unisanta-navy hover:text-white"
+          >
+            <Download className="h-4 w-4" />
+            Baixar QR Code
+          </a>
+        </div>
+      </Card>
+
+      <GeofencePanel
+        initialPoints={parseGeofencePoints(event?.pontos_geofence)}
+        presets={presets}
+        action={updateEventGeofenceForEvent}
+      />
+
       <Card className="flex flex-col divide-y divide-zinc-100">
         {(checkpoints ?? []).map((cp) => (
           <div key={cp.id} className="flex items-center justify-between gap-3 px-5 py-3">
@@ -117,6 +182,7 @@ export default async function EventDashboardPage({
           initialCheckpoints={initialCheckpoints}
           eventStartsAt={eventStartsAt}
           eventEndsAt={eventEndsAt}
+          lockedCheckpoints={lockedCheckpoints}
           action={syncCheckpointsForEvent}
         />
       </Card>

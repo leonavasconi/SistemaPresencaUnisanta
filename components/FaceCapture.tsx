@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Camera, Loader2 } from "lucide-react";
+import { Camera, Loader2, RefreshCw } from "lucide-react";
 import { loadFaceModels, extractFaceDescriptor } from "@/lib/face/models";
 import { Button } from "@/components/ui/Button";
 
@@ -18,6 +18,9 @@ export function FaceCapture({
   const streamRef = useRef<MediaStream | null>(null);
   const [status, setStatus] = useState<Status>("loading-models");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Incrementado pelo botão "Tentar novamente" para reexecutar o efeito de
+  // carregar o modelo + pedir a câmera do zero, sem duplicar essa lógica.
+  const [retryToken, setRetryToken] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,7 +58,13 @@ export function FaceCapture({
       cancelled = true;
       streamRef.current?.getTracks().forEach((t) => t.stop());
     };
-  }, []);
+  }, [retryToken]);
+
+  function handleRetry() {
+    setErrorMessage(null);
+    setStatus("loading-models");
+    setRetryToken((t) => t + 1);
+  }
 
   async function handleCapture() {
     if (!videoRef.current) return;
@@ -108,15 +117,22 @@ export function FaceCapture({
         <p className="text-center text-sm text-unisanta-red">{errorMessage}</p>
       )}
 
-      <Button
-        type="button"
-        onClick={handleCapture}
-        disabled={status !== "ready"}
-        className="w-full max-w-64"
-      >
-        <Camera className="h-4 w-4" />
-        {status === "processing" ? "Analisando..." : "Capturar rosto"}
-      </Button>
+      {status === "error" ? (
+        <Button type="button" onClick={handleRetry} className="w-full max-w-64">
+          <RefreshCw className="h-4 w-4" />
+          Tentar novamente
+        </Button>
+      ) : (
+        <Button
+          type="button"
+          onClick={handleCapture}
+          disabled={status !== "ready"}
+          className="w-full max-w-64"
+        >
+          <Camera className="h-4 w-4" />
+          {status === "processing" ? "Analisando..." : "Capturar rosto"}
+        </Button>
+      )}
     </div>
   );
 }

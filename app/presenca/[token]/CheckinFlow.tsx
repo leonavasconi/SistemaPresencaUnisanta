@@ -23,7 +23,11 @@ type Stage =
 const REJECTION_MESSAGES: Record<string, string> = {
   checkpoint_nao_encontrado: "QR Code inválido ou expirado.",
   fora_da_janela_de_horario: "Este momento de presença não está aberto agora.",
+  janela_conflitante_outro_evento:
+    "Você já registrou presença em outro evento com horário conflitante com este momento.",
   evento_nao_encontrado: "Evento não encontrado.",
+  area_nao_configurada:
+    "Este evento ainda não teve sua área de check-in configurada. Procure o organizador.",
   fora_da_area_do_evento:
     "Você está fora da área do evento. Aproxime-se do local para registrar presença.",
   dispositivo_ja_utilizado_por_outro_participante:
@@ -57,6 +61,9 @@ export function CheckinFlow({
   const [coords, setCoords] = useState<{ lat: number; lng: number; accuracy: number } | null>(
     null,
   );
+  // Incrementado por "Tentar novamente" para reexecutar o fluxo de
+  // localização → captura facial do zero, sem duplicar essa lógica.
+  const [retryToken, setRetryToken] = useState(0);
 
   // Trava de reentrada: garante um envio por vez mesmo se o clique escapar
   // enquanto o React ainda não re-renderizou o botão desabilitado.
@@ -88,7 +95,15 @@ export function CheckinFlow({
       },
       { enableHighAccuracy: true, timeout: 15000 },
     );
-  }, [alreadyRegisteredAt]);
+  }, [alreadyRegisteredAt, retryToken]);
+
+  // Chamado pelo clique do botão, nunca do corpo do efeito — resetar estado ali
+  // dispararia o lint react-hooks/set-state-in-effect.
+  function handleRetry() {
+    setMessage(null);
+    setStage("localizando");
+    setRetryToken((t) => t + 1);
+  }
 
   async function handleFaceCaptured(descriptor: number[]) {
     if (!coords || submittingRef.current) return;
@@ -204,6 +219,13 @@ export function CheckinFlow({
               >
                 Ver minhas presenças
               </Link>
+
+              <Link
+                href="/eventos"
+                className="text-sm font-medium text-zinc-500 hover:underline"
+              >
+                Voltar para a tela inicial
+              </Link>
             </>
           )}
 
@@ -214,6 +236,15 @@ export function CheckinFlow({
               </div>
               <p className="font-medium text-unisanta-red">Não foi possível registrar</p>
               <p className="text-sm text-zinc-500">{message}</p>
+              <Button type="button" onClick={handleRetry} className="w-full">
+                Tentar novamente
+              </Button>
+              <Link
+                href="/eventos"
+                className="text-sm font-medium text-unisanta-navy hover:underline"
+              >
+                Voltar para eventos
+              </Link>
             </>
           )}
 
@@ -223,6 +254,15 @@ export function CheckinFlow({
                 <XCircle className="h-8 w-8 text-unisanta-red" />
               </div>
               <p className="text-sm text-unisanta-red">{message}</p>
+              <Button type="button" onClick={handleRetry} className="w-full">
+                Tentar novamente
+              </Button>
+              <Link
+                href="/eventos"
+                className="text-sm font-medium text-unisanta-navy hover:underline"
+              >
+                Voltar para eventos
+              </Link>
             </>
           )}
         </div>

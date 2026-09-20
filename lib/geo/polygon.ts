@@ -109,8 +109,8 @@ export function checkPointInArea(
   return { inside: shortest <= toleranceMeters, distanceToEdgeMeters: shortest };
 }
 
-/** Quantos pontos definem a área de um evento novo: 3 = um triângulo. */
-export const GEOFENCE_POINTS = 3;
+/** Mínimo de pontos para formar uma área (um triângulo); não há máximo. */
+export const MIN_GEOFENCE_POINTS = 3;
 
 /** Área mínima aceita (m²) — abaixo disso a área é fina demais para ser usável. */
 export const MIN_GEOFENCE_AREA_M2 = 25;
@@ -144,14 +144,21 @@ export function isUsableGeofence(points: GeoPoint[]): boolean {
 }
 
 /**
- * Valida a área desenhada pelo admin. Além da contagem de pontos, rejeita o
- * triângulo degenerado: três pontos alinhados (ou praticamente no mesmo
- * lugar) formam uma área de espessura zero, dentro da qual nenhum
- * participante conseguiria registrar presença.
+ * Valida a área desenhada pelo admin: no mínimo 3 pontos, sem máximo.
+ *
+ * Quando `required` é falso, uma área vazia (`[]`) é válida — o evento pode
+ * ser criado sem posição ainda, já que os pontos costumam ser marcados
+ * presencialmente. 1 ou 2 pontos, porém, nunca são válidos (não formam
+ * área), e 3+ pontos precisam superar `MIN_GEOFENCE_AREA_M2` — do contrário
+ * estão alinhados (ou praticamente no mesmo lugar), formando uma área de
+ * espessura zero onde ninguém conseguiria registrar presença.
  */
-export function validateGeofenceTriangle(points: GeoPoint[]): string | null {
-  if (points.length !== GEOFENCE_POINTS) {
-    return `Marque exatamente ${GEOFENCE_POINTS} pontos para formar a área triangular do evento.`;
+export function validateGeofenceArea(points: GeoPoint[], required = false): string | null {
+  if (points.length === 0) {
+    return required ? `Marque pelo menos ${MIN_GEOFENCE_POINTS} pontos para definir a área do evento.` : null;
+  }
+  if (points.length < MIN_GEOFENCE_POINTS) {
+    return `Marque pelo menos ${MIN_GEOFENCE_POINTS} pontos para formar a área do evento.`;
   }
   if (points.some((p) => !Number.isFinite(p.lat) || !Number.isFinite(p.lng))) {
     return "Há um ponto com coordenada inválida. Confira a latitude e a longitude.";
@@ -160,7 +167,7 @@ export function validateGeofenceTriangle(points: GeoPoint[]): string | null {
     return "Há um ponto fora do intervalo válido de latitude/longitude.";
   }
   if (polygonAreaSquareMeters(points) < MIN_GEOFENCE_AREA_M2) {
-    return "Os 3 pontos estão alinhados ou muito próximos e não formam uma área utilizável. Afaste-os para cobrir o local do evento.";
+    return "Os pontos estão alinhados ou muito próximos e não formam uma área utilizável. Afaste-os para cobrir o local do evento.";
   }
   return null;
 }

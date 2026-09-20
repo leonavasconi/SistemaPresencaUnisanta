@@ -1,12 +1,18 @@
 import Link from "next/link";
-import { CalendarX2, MapPin, Clock, QrCode } from "lucide-react";
+import { CalendarX2, CheckCircle2, MapPin, Clock, QrCode } from "lucide-react";
 import { ParticipantHeader } from "@/components/ParticipantHeader";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/Card";
 import { eventMatchesAudience } from "@/lib/audience";
 import { formatDateTimeBR, formatTimeBR } from "@/lib/datetime";
+import { isUsableGeofence, parseGeofencePoints } from "@/lib/geo/polygon";
 
-function momentoStatus(opensAt: string, closesAt: string) {
+function momentoStatus(opensAt: string, closesAt: string, hasLocation: boolean) {
+  // Sem local definido, o check-in sempre seria recusado no servidor ("área
+  // não configurada") — melhor nem deixar o participante começar o fluxo.
+  if (!hasLocation) {
+    return { label: "Aguardando local definido", className: "bg-amber-100 text-amber-700", isOpen: false };
+  }
   const now = Date.now();
   const opens = new Date(opensAt).getTime();
   const closes = new Date(closesAt).getTime();
@@ -30,9 +36,15 @@ export default async function EventosPage() {
   const { data: events } = await supabase
     .from("eventos")
     .select(
-      "id, nome, descricao, inicio_em, fim_em, cursos_alvo, salas_alvo, momentos_presenca(id, rotulo, abre_em, fecha_em, ordem, token_qr)",
+      "id, nome, descricao, inicio_em, fim_em, cursos_alvo, salas_alvo, pontos_geofence, momentos_presenca(id, rotulo, abre_em, fecha_em, ordem, token_qr)",
     )
     .order("inicio_em", { ascending: false });
+
+  const { data: myRecords } = await supabase
+    .from("registros_presenca")
+    .select("momento_id")
+    .eq("participante_id", user?.id ?? "");
+  const registeredMomentoIds = new Set((myRecords ?? []).map((r) => r.momento_id));
 
   const visibleEvents = (events ?? []).filter((event) =>
     eventMatchesAudience(event, { curso: participant?.curso, sala: participant?.sala }),
@@ -55,6 +67,7 @@ export default async function EventosPage() {
               const momentos = [...(event.momentos_presenca ?? [])].sort(
                 (a, b) => a.ordem - b.ordem,
               );
+              const hasLocation = isUsableGeofence(parseGeofencePoints(event.pontos_geofence));
               return (
                 <Card key={event.id} className="flex flex-col gap-3 p-5">
                   <div>
@@ -72,7 +85,8 @@ export default async function EventosPage() {
                   {momentos.length > 0 && (
                     <div className="flex flex-col gap-2 border-t border-zinc-100 pt-3">
                       {momentos.map((momento) => {
-                        const status = momentoStatus(momento.abre_em, momento.fecha_em);
+                        const status = momentoStatus(momento.abre_em, momento.fecha_em, hasLocation);
+                        const alreadyRegistered = registeredMomentoIds.has(momento.id);
                         return (
                           <div key={momento.id} className="flex items-center justify-between gap-3 text-sm">
                             <span className="flex items-center gap-1.5 text-zinc-600">
@@ -85,17 +99,26 @@ export default async function EventosPage() {
                               </span>
                             </span>
                             <div className="flex shrink-0 items-center gap-2">
-                              <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${status.className}`}>
-                                {status.label}
-                              </span>
-                              {status.isOpen && (
-                                <Link
-                                  href={`/presenca/${momento.token_qr}`}
-                                  className="flex items-center gap-1 rounded-full bg-unisanta-red px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-unisanta-red-dark"
-                                >
-                                  <QrCode className="h-3 w-3" />
-                                  Registrar presença
-                                </Link>
+                              {alreadyRegistered ? (
+                                <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  Presença já registrada
+                                </span>
+                              ) : (
+                                <>
+                                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${status.className}`}>
+                                    {status.label}
+                                  </span>
+                                  {status.isOpen && (
+                                    <Link
+                                      href={`/presenca/${momento.token_qr}`}
+                                      className="flex items-center gap-1 rounded-full bg-unisanta-red px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-unisanta-red-dark"
+                                    >
+                                      <QrCode className="h-3 w-3" />
+                                      Registrar presença
+                                    </Link>
+                                  )}
+                                </>
                               )}
                             </div>
                           </div>
