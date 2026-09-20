@@ -232,6 +232,35 @@ Deno.serve(async (req: Request) => {
     return reject("fora_da_janela_de_horario");
   }
 
+  // 3.1. Conflito com outro evento na mesma janela (percebido pelo professor:
+  // dois eventos distintos podem usar o mesmo espaço em horários diferentes,
+  // mas nenhum participante pode estar fisicamente em dois lugares ao mesmo
+  // tempo). Rejeita se este participante já tem presença aprovada em OUTRO
+  // evento cujo momento se sobrepõe ao horário deste momento — não importa
+  // se a janela do outro evento ainda está aberta agora, o que importa é que
+  // as duas janelas se cruzam.
+  const { data: otherRecords } = await supabase
+    .from("registros_presenca")
+    .select("evento_id, momentos_presenca(abre_em, fecha_em)")
+    .eq("participante_id", participantId)
+    .eq("situacao", "aprovado")
+    .neq("evento_id", checkpoint.evento_id);
+
+  const thisOpensAt = new Date(checkpoint.abre_em).getTime();
+  const thisClosesAt = new Date(checkpoint.fecha_em).getTime();
+  const hasConflict = (otherRecords ?? []).some((record) => {
+    const other = Array.isArray(record.momentos_presenca)
+      ? record.momentos_presenca[0]
+      : record.momentos_presenca;
+    if (!other) return false;
+    const otherOpensAt = new Date(other.abre_em).getTime();
+    const otherClosesAt = new Date(other.fecha_em).getTime();
+    return otherOpensAt < thisClosesAt && thisOpensAt < otherClosesAt;
+  });
+  if (hasConflict) {
+    return reject("janela_conflitante_outro_evento");
+  }
+
   // 4. Evento + área (3.3).
   const { data: event, error: eventError } = await supabase
     .from("eventos")
@@ -246,19 +275,27 @@ Deno.serve(async (req: Request) => {
   const tolerance = Math.min(payload.accuracyMeters ?? 0, MAX_GPS_TOLERANCE_M);
   const geofencePoints = parseGeofencePoints(event.pontos_geofence);
   const participantPoint = { lat: payload.latitude, lng: payload.longitude };
+  const hasCircleFallback =
+    typeof event.latitude === "number" &&
+    typeof event.longitude === "number" &&
+    typeof event.raio_metros === "number";
+
+  // Evento criado sem área ainda (fluxo "adianto o cadastro e marco os
+  // pontos presencialmente depois") — não há como validar check-in.
+  if (!isUsableGeofence(geofencePoints) && !hasCircleFallback) {
+    return reject("area_nao_configurada");
+  }
 
   // Distância até o centro, mantida para o registro de auditoria nos dois
-  // caminhos de validação.
-  const distanceToCenter = haversineMeters(
-    payload.latitude,
-    payload.longitude,
-    event.latitude,
-    event.longitude,
-  );
+  // caminhos de validação. Só existe quando há um centro (o mesmo centroide
+  // que alimenta o círculo de fallback).
+  const distanceToCenter = hasCircleFallback
+    ? haversineMeters(payload.latitude, payload.longitude, event.latitude, event.longitude)
+    : 0;
 
   if (isUsableGeofence(geofencePoints)) {
-    // Caminho novo: a área é o polígono desenhado pelo admin (3 pontos = um
-    // triângulo). É ele que decide dentro/fora — não a distância a um centro.
+    // Caminho novo: a área é o polígono desenhado pelo admin (3+ pontos). É
+    // ele que decide dentro/fora — não a distância a um centro.
     const area = checkPointInArea(participantPoint, geofencePoints, tolerance);
     if (!area.inside) {
       return reject("fora_da_area_do_evento", {

@@ -41,6 +41,19 @@ export default async function CheckpointsPage({
     };
   }
 
+  const { data: registros } = await supabase
+    .from("registros_presenca")
+    .select("momento_id")
+    .eq("evento_id", eventId);
+  const registeredMomentIds = new Set((registros ?? []).map((r) => r.momento_id));
+  const lockedCheckpoints = (checkpoints ?? [])
+    .filter((cp) => registeredMomentIds.has(cp.id))
+    .map((cp) => ({
+      id: cp.id,
+      opensAt: toDatetimeLocalValue(new Date(cp.abre_em)),
+      closesAt: toDatetimeLocalValue(new Date(cp.fecha_em)),
+    }));
+
   const initialCheckpoints: CheckpointDraft[] =
     checkpoints && checkpoints.length > 0
       ? checkpoints.map((cp) => ({
@@ -89,6 +102,7 @@ export default async function CheckpointsPage({
           eventStartsAt={eventStartsAt}
           eventEndsAt={eventEndsAt}
           qrByCheckpointId={qrByCheckpointId}
+          lockedCheckpoints={lockedCheckpoints}
           action={syncCheckpointsForEvent}
         />
       </Card>

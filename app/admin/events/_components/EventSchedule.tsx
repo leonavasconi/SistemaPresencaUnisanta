@@ -9,10 +9,10 @@ import { parseSaoPauloDateTime } from "@/lib/datetime";
  * Coleta a data e o horário do evento.
  *
  * O `<input type="datetime-local">` que existia antes obrigava a preencher a
- * data inteira duas vezes — e quase todo evento acadêmico começa e termina no
- * mesmo dia. Aqui a data é informada uma vez, os horários são dois campos
- * curtos, e só quem realmente precisa de um evento que vira o dia marca a
- * caixa para escolher a data de término.
+ * data inteira duas vezes — e todo evento aqui começa e termina no mesmo
+ * dia (cada palestra/sessão vira seu próprio evento, mesmo compartilhando
+ * o mesmo espaço em horários diferentes). Aqui a data é informada uma vez
+ * e os horários são dois campos curtos.
  *
  * Data e hora são estado DESTE componente, não derivados de `startsAt`. A
  * diferença importa: `startsAt` só existe quando as duas partes estão
@@ -28,15 +28,8 @@ function juntar(data: string, hora: string): string {
   return data && hora ? `${data}T${hora}` : "";
 }
 
-/** Soma dias a uma data AAAA-MM-DD sem esbarrar em fuso horário. */
-function somarDias(data: string, dias: number): string {
-  const d = new Date(`${data}T12:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + dias);
-  return d.toISOString().slice(0, 10);
-}
-
 /**
- * Quanto tempo o evento dura, em texto curto ("1h 30min", "2 dias 4h").
+ * Quanto tempo o evento dura, em texto curto ("1h 30min").
  * Devolve `null` enquanto não houver um intervalo válido — o organizador
  * confere assim, de relance, se digitou os horários certos.
  */
@@ -47,12 +40,10 @@ function formatarDuracao(inicio: string, fim: string): string | null {
   if (!Number.isFinite(ms) || ms <= 0) return null;
 
   const totalMinutos = Math.round(ms / 60_000);
-  const dias = Math.floor(totalMinutos / 1440);
-  const horas = Math.floor((totalMinutos % 1440) / 60);
+  const horas = Math.floor(totalMinutos / 60);
   const minutos = totalMinutos % 60;
 
   const partes: string[] = [];
-  if (dias) partes.push(`${dias} ${dias === 1 ? "dia" : "dias"}`);
   if (horas) partes.push(`${horas}h`);
   if (minutos) partes.push(`${minutos}min`);
   return partes.join(" ");
@@ -70,32 +61,18 @@ export function EventSchedule({
   const [data, setData] = useState("");
   const [horaInicio, setHoraInicio] = useState("");
   const [horaFim, setHoraFim] = useState("");
-  const [dataFim, setDataFim] = useState("");
-  const [variosDias, setVariosDias] = useState(false);
 
   /** Recalcula e publica os dois valores completos para o formulário. */
-  function publicar(next: Partial<{
-    data: string; horaInicio: string; horaFim: string; dataFim: string; variosDias: boolean;
-  }>) {
+  function publicar(next: Partial<{ data: string; horaInicio: string; horaFim: string }>) {
     const d = next.data ?? data;
     const hi = next.horaInicio ?? horaInicio;
     const hf = next.horaFim ?? horaFim;
-    const multi = next.variosDias ?? variosDias;
-    // Sem "vários dias", o término é sempre no mesmo dia do início.
-    const df = multi ? (next.dataFim ?? dataFim) : d;
 
     if (next.data !== undefined) setData(next.data);
     if (next.horaInicio !== undefined) setHoraInicio(next.horaInicio);
     if (next.horaFim !== undefined) setHoraFim(next.horaFim);
-    if (next.dataFim !== undefined) setDataFim(next.dataFim);
-    if (next.variosDias !== undefined) setVariosDias(next.variosDias);
 
-    onChange(juntar(d, hi), juntar(df, hf));
-  }
-
-  function alternarVariosDias(marcado: boolean) {
-    // Ao ligar, sugere o dia seguinte — o caso comum de evento que vira o dia.
-    publicar({ variosDias: marcado, dataFim: marcado ? somarDias(data || new Date().toISOString().slice(0, 10), 1) : "" });
+    onChange(juntar(d, hi), juntar(d, hf));
   }
 
   const duracao = formatarDuracao(startsAt, endsAt);
@@ -163,34 +140,6 @@ export function EventSchedule({
           <span className="text-zinc-400">—</span>
         )}
       </div>
-
-      <label className="flex w-fit cursor-pointer items-center gap-2 text-xs text-zinc-600">
-        <input
-          type="checkbox"
-          checked={variosDias}
-          onChange={(e) => alternarVariosDias(e.target.checked)}
-          className="h-4 w-4 accent-unisanta-navy"
-        />
-        O evento termina em outro dia
-      </label>
-
-      {variosDias && (
-        <div className="flex animate-[revelar_200ms_ease-out] flex-col gap-1.5 sm:max-w-[calc(50%-0.375rem)]">
-          <Label htmlFor="endDate" required>
-            Data de término
-          </Label>
-          <Input
-            id="endDate"
-            icon={CalendarDays}
-            type="date"
-            required
-            min={data || undefined}
-            value={dataFim}
-            onChange={(e) => publicar({ dataFim: e.target.value })}
-            aria-invalid={fimAntesDoInicio}
-          />
-        </div>
-      )}
 
       {fimAntesDoInicio && (
         <p className="text-xs text-unisanta-red">O término precisa ser depois do início.</p>

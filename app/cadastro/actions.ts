@@ -27,6 +27,10 @@ export async function saveEnrollment(input: EnrollmentInput) {
       descritor_facial: input.descriptor,
       consentimento_em: now,
       versao_consentimento: CONSENT_VERSION,
+      // Refazer o cadastro reativa a conta para quem tinha pedido exclusão —
+      // sem isso, `excluido_em` nunca se apaga e a pessoa fica presa num
+      // loop de redirecionamento de volta para esta mesma tela.
+      excluido_em: null,
     })
     .eq("id", user.id);
 
