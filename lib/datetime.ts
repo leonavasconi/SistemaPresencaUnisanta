@@ -43,3 +43,17 @@ export function formatTimeBR(date: Date): string {
 export function formatDateFileStamp(date: Date): string {
   return date.toLocaleDateString("sv-SE", { timeZone: TIME_ZONE });
 }
+
+/**
+ * Instante em que a janela de um momento realmente fecha: o minuto seguinte
+ * ao gravado em `fecha_em` (que sempre tem segundos = 00). Um momento que
+ * fecha às 20:10 aceita check-in até 20:10:59, só encerrando a partir de
+ * 20:11:00 — mesma regra espelhada em `supabase/functions/checkin/index.ts`
+ * (runtime separado, sem módulo compartilhado).
+ */
+export function endOfClosingMinute(closesAt: Date): Date {
+  const d = new Date(closesAt);
+  d.setSeconds(0, 0);
+  d.setMinutes(d.getMinutes() + 1);
+  return d;
+}

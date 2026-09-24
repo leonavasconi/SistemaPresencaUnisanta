@@ -20,7 +20,7 @@ function slugify(value: string): string {
   );
 }
 
-const HEADER = ["Nome", "RA", "Curso", "Momento", "Registrado em", "Situação"];
+const HEADER = ["Nome", "RA", "Curso", "Momento", "Registrado em"];
 
 export async function GET(
   request: Request,
@@ -39,7 +39,7 @@ export async function GET(
   const { data: records } = await supabase
     .from("registros_presenca")
     .select(
-      "registrado_em, situacao, momentos_presenca(rotulo), participantes(nome_completo, matricula, curso)",
+      "registrado_em, momentos_presenca(rotulo), participantes(nome_completo, matricula, curso)",
     )
     .eq("evento_id", eventId)
     .order("registrado_em", { ascending: true });
@@ -53,7 +53,6 @@ export async function GET(
       participant?.curso,
       checkpoint?.rotulo,
       formatDateTimeBR(new Date(r.registrado_em)),
-      r.situacao,
     ];
   });
 

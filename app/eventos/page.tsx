@@ -4,7 +4,7 @@ import { ParticipantHeader } from "@/components/ParticipantHeader";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/Card";
 import { eventMatchesAudience } from "@/lib/audience";
-import { formatDateTimeBR, formatTimeBR } from "@/lib/datetime";
+import { formatDateTimeBR, formatTimeBR, endOfClosingMinute } from "@/lib/datetime";
 import { isUsableGeofence, parseGeofencePoints } from "@/lib/geo/polygon";
 
 function momentoStatus(opensAt: string, closesAt: string, hasLocation: boolean) {
@@ -15,9 +15,9 @@ function momentoStatus(opensAt: string, closesAt: string, hasLocation: boolean) 
   }
   const now = Date.now();
   const opens = new Date(opensAt).getTime();
-  const closes = new Date(closesAt).getTime();
+  const closes = endOfClosingMinute(new Date(closesAt)).getTime();
   if (now < opens) return { label: "Em breve", className: "bg-zinc-100 text-zinc-500", isOpen: false };
-  if (now > closes) return { label: "Encerrado", className: "bg-zinc-100 text-zinc-400", isOpen: false };
+  if (now >= closes) return { label: "Encerrado", className: "bg-zinc-100 text-zinc-400", isOpen: false };
   return { label: "Aberto agora", className: "bg-emerald-100 text-emerald-700", isOpen: true };
 }
 
@@ -88,7 +88,10 @@ export default async function EventosPage() {
                         const status = momentoStatus(momento.abre_em, momento.fecha_em, hasLocation);
                         const alreadyRegistered = registeredMomentoIds.has(momento.id);
                         return (
-                          <div key={momento.id} className="flex items-center justify-between gap-3 text-sm">
+                          <div
+                            key={momento.id}
+                            className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between"
+                          >
                             <span className="flex items-center gap-1.5 text-zinc-600">
                               <Clock className="h-3.5 w-3.5 shrink-0 text-unisanta-navy" />
                               {momento.rotulo}
@@ -98,7 +101,7 @@ export default async function EventosPage() {
                                 {formatTimeBR(new Date(momento.fecha_em))})
                               </span>
                             </span>
-                            <div className="flex shrink-0 items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               {alreadyRegistered ? (
                                 <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
                                   <CheckCircle2 className="h-3 w-3" />

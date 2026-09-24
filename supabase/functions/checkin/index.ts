@@ -39,6 +39,19 @@ interface CheckinPayload {
 
 type GeoPoint = { lat: number; lng: number };
 
+/**
+ * Instante em que a janela de um momento realmente fecha: o minuto seguinte
+ * ao gravado em `fecha_em` (que sempre tem segundos = 00). Dá a folga de
+ * "até o fim do minuto de fechamento" em vez de cortar no primeiro
+ * milissegundo — mesma regra espelhada em `lib/datetime.ts` do app Next.
+ */
+function endOfClosingMinute(closesAtIso: string): Date {
+  const d = new Date(closesAtIso);
+  d.setSeconds(0, 0);
+  d.setMinutes(d.getMinutes() + 1);
+  return d;
+}
+
 // A geometria abaixo espelha `lib/geo/polygon.ts` do app Next. São runtimes
 // separados (Deno x Node) sem módulo compartilhado — o mesmo motivo pelo qual
 // `haversineMeters` já vivia duplicado aqui. Ao mexer em uma, mexa na outra.
@@ -226,9 +239,13 @@ Deno.serve(async (req: Request) => {
     return alreadyRegistered(checkpoint.rotulo, existing.registrado_em);
   }
 
-  // 3. Janela de horário (3.2).
+  // 3. Janela de horário (3.2). O fechamento é tolerante até o fim do
+  // próprio minuto: um momento que fecha às 20:10 aceita check-in até
+  // 20:10:59, só rejeitando a partir de 20:11:00 — sem essa folga, o
+  // participante que lê o QR em 20:10:03 (fecha_em gravado como 20:10:00.000)
+  // já seria barrado, o que é cedo demais para quem "chegou no minuto certo".
   const now = new Date();
-  if (now < new Date(checkpoint.abre_em) || now > new Date(checkpoint.fecha_em)) {
+  if (now < new Date(checkpoint.abre_em) || now >= endOfClosingMinute(checkpoint.fecha_em)) {
     return reject("fora_da_janela_de_horario");
   }
 

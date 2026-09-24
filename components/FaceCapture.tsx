@@ -1,23 +1,29 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { Camera, Loader2, RefreshCw } from "lucide-react";
 import { loadFaceModels, extractFaceDescriptor } from "@/lib/face/models";
 import { Button } from "@/components/ui/Button";
+import { PermissionModal } from "@/components/ui/PermissionModal";
 
 type Status = "loading-models" | "starting-camera" | "ready" | "processing" | "error";
 
 export function FaceCapture({
   instructions,
   onCaptured,
+  backLink,
 }: {
   instructions: string;
   onCaptured: (descriptor: number[]) => void;
+  /** Link mostrado abaixo de "Tentar novamente" quando a captura falha — opcional, só faz sentido em fluxos com um lugar claro para voltar (ex: check-in). */
+  backLink?: { href: string; label: string };
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [status, setStatus] = useState<Status>("loading-models");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
   // Incrementado pelo botão "Tentar novamente" para reexecutar o efeito de
   // carregar o modelo + pedir a câmera do zero, sem duplicar essa lógica.
   const [retryToken, setRetryToken] = useState(0);
@@ -45,6 +51,13 @@ export function FaceCapture({
         }
         setStatus("ready");
       } catch (err) {
+        // NotAllowedError é especificamente perda de permissão, não falta de
+        // câmera/hardware — vale um aviso mais difícil de ignorar que o texto
+        // discreto do card, porque quem nunca usou o app não entende sozinho
+        // que precisa liberar a permissão do navegador.
+        if (err instanceof DOMException && err.name === "NotAllowedError") {
+          setShowPermissionModal(true);
+        }
         setErrorMessage(
           err instanceof Error ? err.message : "Não foi possível acessar a câmera",
         );
@@ -62,6 +75,7 @@ export function FaceCapture({
 
   function handleRetry() {
     setErrorMessage(null);
+    setShowPermissionModal(false);
     setStatus("loading-models");
     setRetryToken((t) => t + 1);
   }
@@ -118,10 +132,20 @@ export function FaceCapture({
       )}
 
       {status === "error" ? (
-        <Button type="button" onClick={handleRetry} className="w-full max-w-64">
-          <RefreshCw className="h-4 w-4" />
-          Tentar novamente
-        </Button>
+        <>
+          <Button type="button" onClick={handleRetry} className="w-full max-w-64">
+            <RefreshCw className="h-4 w-4" />
+            Tentar novamente
+          </Button>
+          {backLink && (
+            <Link
+              href={backLink.href}
+              className="text-sm font-medium text-zinc-500 hover:underline"
+            >
+              {backLink.label}
+            </Link>
+          )}
+        </>
       ) : (
         <Button
           type="button"
@@ -132,6 +156,14 @@ export function FaceCapture({
           <Camera className="h-4 w-4" />
           {status === "processing" ? "Analisando..." : "Capturar rosto"}
         </Button>
+      )}
+
+      {showPermissionModal && (
+        <PermissionModal
+          title="Acesso à câmera necessário"
+          message="Você precisa permitir o acesso à câmera para confirmar sua identidade. Habilite a permissão nas configurações do navegador e tente novamente."
+          onDismiss={() => setShowPermissionModal(false)}
+        />
       )}
     </div>
   );

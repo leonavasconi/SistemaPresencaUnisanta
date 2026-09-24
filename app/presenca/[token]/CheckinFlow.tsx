@@ -9,6 +9,7 @@ import { getDeviceFingerprint } from "@/lib/device/fingerprint";
 import { FaceCapture } from "@/components/FaceCapture";
 import { PageBackground } from "@/components/ui/PageBackground";
 import { Button } from "@/components/ui/Button";
+import { PermissionModal } from "@/components/ui/PermissionModal";
 import { formatDateTimeBR } from "@/lib/datetime";
 
 type Stage =
@@ -61,6 +62,7 @@ export function CheckinFlow({
   const [coords, setCoords] = useState<{ lat: number; lng: number; accuracy: number } | null>(
     null,
   );
+  const [showLocationPermissionModal, setShowLocationPermissionModal] = useState(false);
   // Incrementado por "Tentar novamente" para reexecutar o fluxo de
   // localização → captura facial do zero, sem duplicar essa lógica.
   const [retryToken, setRetryToken] = useState(0);
@@ -89,7 +91,13 @@ export function CheckinFlow({
         });
         setStage("pronto-para-captura");
       },
-      () => {
+      (geoError) => {
+        // PERMISSION_DENIED (código 1): quem nunca usou o app não entende
+        // sozinho que precisa liberar a localização — o popup chama mais
+        // atenção do que o texto discreto do card de erro.
+        if (geoError.code === geoError.PERMISSION_DENIED) {
+          setShowLocationPermissionModal(true);
+        }
         setStage("erro");
         setMessage("Não foi possível obter sua localização. Ative o GPS e permita o acesso.");
       },
@@ -101,6 +109,7 @@ export function CheckinFlow({
   // dispararia o lint react-hooks/set-state-in-effect.
   function handleRetry() {
     setMessage(null);
+    setShowLocationPermissionModal(false);
     setStage("localizando");
     setRetryToken((t) => t + 1);
   }
@@ -177,6 +186,7 @@ export function CheckinFlow({
             <FaceCapture
               instructions="Confirme sua identidade para registrar presença"
               onCaptured={handleFaceCaptured}
+              backLink={{ href: "/eventos", label: "Voltar para eventos" }}
             />
           )}
 
@@ -241,7 +251,7 @@ export function CheckinFlow({
               </Button>
               <Link
                 href="/eventos"
-                className="text-sm font-medium text-unisanta-navy hover:underline"
+                className="text-sm font-medium text-zinc-500 hover:underline"
               >
                 Voltar para eventos
               </Link>
@@ -259,7 +269,7 @@ export function CheckinFlow({
               </Button>
               <Link
                 href="/eventos"
-                className="text-sm font-medium text-unisanta-navy hover:underline"
+                className="text-sm font-medium text-zinc-500 hover:underline"
               >
                 Voltar para eventos
               </Link>
@@ -267,6 +277,14 @@ export function CheckinFlow({
           )}
         </div>
       </div>
+
+      {showLocationPermissionModal && (
+        <PermissionModal
+          title="Acesso à localização necessário"
+          message="Você precisa permitir o acesso à localização para registrar presença. Habilite a permissão nas configurações do navegador e tente novamente."
+          onDismiss={() => setShowLocationPermissionModal(false)}
+        />
+      )}
     </PageBackground>
   );
 }
