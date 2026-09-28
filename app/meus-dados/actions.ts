@@ -23,6 +23,7 @@ export async function deleteMyData() {
     .from("participantes")
     .update({
       nome_completo: "Participante removido",
+      aluno_unisanta: false,
       matricula: null,
       curso: null,
       sala: null,

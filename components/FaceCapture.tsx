@@ -38,7 +38,11 @@ export function FaceCapture({
 
         setStatus("starting-camera");
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user" },
+          video: {
+            facingMode: { ideal: "user" },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
           audio: false,
         });
         if (cancelled) {
@@ -48,6 +52,8 @@ export function FaceCapture({
         streamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
+          videoRef.current.setAttribute("playsinline", "true");
+          void videoRef.current.play().catch(() => undefined);
         }
         setStatus("ready");
       } catch (err) {
@@ -81,13 +87,15 @@ export function FaceCapture({
   }
 
   async function handleCapture() {
-    if (!videoRef.current) return;
+    if (!videoRef.current || status !== "ready") return;
     setStatus("processing");
     setErrorMessage(null);
 
     const descriptor = await extractFaceDescriptor(videoRef.current);
     if (!descriptor) {
-      setErrorMessage("Nenhum rosto detectado. Posicione seu rosto no centro da câmera.");
+      setErrorMessage(
+        "Rosto não identificado. Posicione o rosto bem no centro, com boa iluminação e mantenha-o visível.",
+      );
       setStatus("ready");
       return;
     }
