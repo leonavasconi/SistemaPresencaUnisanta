@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
-import { ShieldAlert } from "lucide-react";
+import Link from "next/link";
+import { ShieldAlert, ScanFace } from "lucide-react";
 import { ParticipantHeader } from "@/components/ParticipantHeader";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionUser } from "@/lib/supabase/auth";
 import { PageHeader, Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { formatDateTimeBR } from "@/lib/datetime";
 import { DeleteDataButton } from "./DeleteDataButton";
 
@@ -59,6 +61,25 @@ export default async function MeusDadosPage() {
             />
           </dl>
         </Card>
+
+        {/* Saída para quem o check-in não reconhece: a foto do cadastro pode
+            ter sido feita em condição muito diferente da do evento. */}
+        <div className="max-w-lg rounded-2xl border border-zinc-200 bg-white p-6">
+          <div className="flex items-center gap-2">
+            <ScanFace className="h-4.5 w-4.5 text-unisanta-navy" />
+            <h2 className="font-medium text-zinc-800">Meu rosto cadastrado</h2>
+          </div>
+          <p className="mt-2 text-sm leading-relaxed text-zinc-600">
+            Se o check-in não está reconhecendo você, capture uma foto nova — de
+            preferência no próprio local do evento, com a iluminação de lá.
+          </p>
+          <Link href="/meus-dados/rosto" className="mt-4 inline-block">
+            <Button type="button" variant="outline">
+              <ScanFace className="h-4 w-4" />
+              Atualizar meu rosto
+            </Button>
+          </Link>
+        </div>
 
         <div className="max-w-lg rounded-2xl border border-red-100 bg-red-50/60 p-6">
           <div className="flex items-center gap-2">

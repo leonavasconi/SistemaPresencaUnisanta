@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, CheckCircle2, AlertTriangle, XCircle, MapPin } from "lucide-react";
+import { Loader2, CheckCircle2, AlertTriangle, XCircle, MapPin, ScanFace } from "lucide-react";
 import { FunctionsFetchError, FunctionsHttpError, FunctionsRelayError } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { getDeviceFingerprint } from "@/lib/device/fingerprint";
@@ -112,6 +112,9 @@ export function CheckinFlow({
     alreadyRegisteredAt ? "ja-registrado" : "localizando",
   );
   const [message, setMessage] = useState<string | null>(null);
+  // Guardado além da mensagem porque a saída oferecida depende do motivo:
+  // só a falha de biometria leva à recaptura do rosto.
+  const [rejectionReason, setRejectionReason] = useState<string | null>(null);
   const [checkpointLabel, setCheckpointLabel] = useState<string | null>(initialCheckpointLabel);
   const [registeredAt, setRegisteredAt] = useState<string | null>(alreadyRegisteredAt);
   const [coords, setCoords] = useState<{ lat: number; lng: number; accuracy: number } | null>(
@@ -169,6 +172,7 @@ export function CheckinFlow({
   // dispararia o lint react-hooks/set-state-in-effect.
   function handleRetry() {
     setMessage(null);
+    setRejectionReason(null);
     setShowLocationPermissionModal(false);
     setStage("localizando");
     setRetryToken((t) => t + 1);
@@ -269,6 +273,7 @@ export function CheckinFlow({
     setMessage(
       (data.reason && REJECTION_MESSAGES[data.reason]) ?? "Não foi possível registrar sua presença.",
     );
+    setRejectionReason(data.reason ?? null);
     setStage("rejeitado");
   }
 
@@ -366,6 +371,26 @@ export function CheckinFlow({
               <Button type="button" onClick={handleRetry} className="w-full">
                 Tentar novamente
               </Button>
+
+              {/* Insistir não adianta quando o rosto cadastrado foi capturado
+                  em outra condição: a comparação vai falhar sempre. A saída é
+                  recapturar aqui mesmo, no local, e é para isso que apontamos. */}
+              {rejectionReason === "biometria_nao_confere" && (
+                <div className="flex w-full flex-col gap-2 rounded-xl bg-amber-50/70 p-3 text-center">
+                  <p className="text-xs leading-relaxed text-amber-800">
+                    Já tentou mais de uma vez? Sua foto de cadastro pode ter sido feita
+                    com outra iluminação. Atualize seu rosto aqui mesmo e tente de novo.
+                  </p>
+                  <Link
+                    href={`/meus-dados/rosto?voltar=${encodeURIComponent(`/presenca/${token}`)}`}
+                    className="flex items-center justify-center gap-1.5 text-sm font-medium text-unisanta-navy underline-offset-4 hover:underline"
+                  >
+                    <ScanFace className="h-4 w-4" />
+                    Atualizar meu rosto
+                  </Link>
+                </div>
+              )}
+
               <Link
                 href="/eventos"
                 className="text-sm font-medium text-zinc-500 hover:underline"
