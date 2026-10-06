@@ -1,19 +1,22 @@
+import { redirect } from "next/navigation";
 import { CalendarX2, CheckCircle2 } from "lucide-react";
 import { ParticipantHeader } from "@/components/ParticipantHeader";
 import { createClient } from "@/lib/supabase/server";
+import { getSessionUser } from "@/lib/supabase/auth";
 import { PageHeader, Card } from "@/components/ui/Card";
 import { formatDateTimeBR } from "@/lib/datetime";
 
 export default async function MinhasPresencasPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSessionUser(supabase);
+  // Sem sessão válida (token ausente/expirado), nada de consultar com id
+  // vazio — isso gerava centenas de erros "invalid input syntax for type uuid".
+  if (!user) redirect("/entrar");
 
   const { data: records } = await supabase
     .from("registros_presenca")
     .select("id, registrado_em, momentos_presenca(rotulo, eventos(nome))")
-    .eq("participante_id", user?.id ?? "")
+    .eq("participante_id", user.id)
     .order("registrado_em", { ascending: false });
 
   return (

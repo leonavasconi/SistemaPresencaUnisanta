@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Loader2, CheckCircle2, AlertTriangle, XCircle, MapPin } from "lucide-react";
+import { FunctionsFetchError, FunctionsHttpError, FunctionsRelayError } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { getDeviceFingerprint } from "@/lib/device/fingerprint";
 import { FaceCapture } from "@/components/FaceCapture";
@@ -16,6 +18,7 @@ type Stage =
   | "localizando"
   | "pronto-para-captura"
   | "enviando"
+  | "tentando-novamente"
   | "aprovado"
   | "ja-registrado"
   | "rejeitado"
@@ -41,6 +44,58 @@ const REJECTION_MESSAGES: Record<string, string> = {
   payload_invalido: "Dados inválidos enviados pelo aplicativo.",
   erro_ao_gravar: "Não foi possível gravar sua presença. Tente novamente.",
 };
+
+// Envio resiliente ao pico: cada tentativa tem prazo próprio e só falhas de
+// infraestrutura são repetidas. Respostas de negócio (aprovado, já registrado,
+// recusado) são definitivas e nunca reenviadas.
+const MAX_ATTEMPTS = 3;
+const ATTEMPT_TIMEOUT_MS = 12_000;
+const BACKOFF_BASE_MS = 1_000;
+const BACKOFF_CAP_MS = 8_000;
+
+const OVERLOADED_MESSAGE =
+  "O servidor está sobrecarregado no momento. Aguarde 1 minuto e toque em Tentar novamente. Não é preciso recarregar a página.";
+
+/** Backoff exponencial com jitter total: evita que todos os alunos retentem juntos. */
+function backoffDelayMs(failedAttempt: number) {
+  const ceiling = Math.min(BACKOFF_CAP_MS, BACKOFF_BASE_MS * 2 ** (failedAttempt - 1));
+  return Math.random() * ceiling;
+}
+
+/** Espera `ms`; devolve false se foi cancelada antes (a tela foi fechada). */
+function sleep(ms: number, signal: AbortSignal) {
+  return new Promise<boolean>((resolve) => {
+    if (signal.aborted) return resolve(false);
+    const onAbort = () => {
+      clearTimeout(timer);
+      resolve(false);
+    };
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve(true);
+    }, ms);
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+/**
+ * Falha de infraestrutura que vale repetir: timeout/rede (o abort do timeout
+ * chega como FunctionsFetchError), erro do relay, 5xx e 429. O servidor
+ * responde as recusas de negócio com HTTP 200, então não passam por aqui.
+ */
+function isTransientError(error: unknown) {
+  if (error instanceof FunctionsFetchError || error instanceof FunctionsRelayError) return true;
+  if (error instanceof FunctionsHttpError) {
+    const status = (error.context as Response).status;
+    return status >= 500 || status === 429;
+  }
+  return false;
+}
+
+/** Gateway recusou o token (401): sessão inválida, repetir não adianta. */
+function isUnauthorizedError(error: unknown) {
+  return error instanceof FunctionsHttpError && (error.context as Response).status === 401;
+}
 
 export function CheckinFlow({
   token,
@@ -70,6 +125,11 @@ export function CheckinFlow({
   // Trava de reentrada: garante um envio por vez mesmo se o clique escapar
   // enquanto o React ainda não re-renderizou o botão desabilitado.
   const submittingRef = useRef(false);
+  const router = useRouter();
+  const [attempt, setAttempt] = useState(1);
+  // Cancela o envio em andamento (e o backoff) se o aluno sair da tela.
+  const abortRef = useRef<AbortController | null>(null);
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   useEffect(() => {
     if (alreadyRegisteredAt) return;
@@ -117,52 +177,99 @@ export function CheckinFlow({
   async function handleFaceCaptured(descriptor: number[]) {
     if (!coords || submittingRef.current) return;
     submittingRef.current = true;
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setAttempt(1);
     setStage("enviando");
 
     try {
       const supabase = createClient();
       const deviceHash = await getDeviceFingerprint();
+      const body = {
+        qrToken: token,
+        descriptor,
+        latitude: coords.lat,
+        longitude: coords.lng,
+        accuracyMeters: coords.accuracy,
+        deviceHash,
+      };
 
-      const { data, error } = await supabase.functions.invoke("checkin", {
-        body: {
-          qrToken: token,
-          descriptor,
-          latitude: coords.lat,
-          longitude: coords.lng,
-          accuracyMeters: coords.accuracy,
-          deviceHash,
-        },
-      });
+      for (let n = 1; n <= MAX_ATTEMPTS; n++) {
+        const { data, error } = await supabase.functions.invoke("checkin", {
+          body,
+          timeout: ATTEMPT_TIMEOUT_MS,
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted) return;
 
-      if (error || !data) {
-        setStage("erro");
-        setMessage("Erro de conexão. Tente novamente.");
-        return;
+        if (!error && data) {
+          handleResult(data);
+          return;
+        }
+
+        if (isUnauthorizedError(error)) {
+          router.replace("/entrar");
+          return;
+        }
+
+        if (!isTransientError(error)) {
+          setStage("erro");
+          setMessage("Erro inesperado ao registrar a presença. Tente novamente.");
+          return;
+        }
+
+        if (n === MAX_ATTEMPTS) break;
+
+        setAttempt(n + 1);
+        setStage("tentando-novamente");
+        if (!(await sleep(backoffDelayMs(n), controller.signal))) return;
       }
 
-      if (data.status === "approved") {
-        setCheckpointLabel(data.checkpoint);
-        setRegisteredAt(new Date().toISOString());
-        setStage("aprovado");
-        return;
-      }
-
-      // O servidor encontrou uma presença que já existia (ou barrou a segunda
-      // gravação simultânea): isso não é recusa, é o estado atual do check-in.
-      if (data.status === "already_registered") {
-        setCheckpointLabel(data.checkpoint ?? checkpointLabel);
-        setRegisteredAt(data.recordedAt ?? null);
-        setStage("ja-registrado");
-        return;
-      }
-
-      setMessage(REJECTION_MESSAGES[data.reason] ?? "Não foi possível registrar sua presença.");
-      setStage("rejeitado");
+      setStage("erro");
+      setMessage(OVERLOADED_MESSAGE);
+    } catch {
+      if (controller.signal.aborted) return;
+      setStage("erro");
+      setMessage("Erro inesperado ao registrar a presença. Tente novamente.");
     } finally {
-      // Só libera para nova tentativa quando o resultado não é definitivo —
-      // presença aprovada ou já registrada não deve ser reenviada nunca.
+      // O resultado definitivo (aprovado/já registrado) nunca é reenviado: a
+      // tela sai do fluxo de captura. Nos demais casos libera nova tentativa.
       submittingRef.current = false;
     }
+  }
+
+  /** Resposta definitiva do servidor (HTTP 200): mostra o resultado na hora, sem retry. */
+  function handleResult(data: {
+    status: string;
+    checkpoint?: string;
+    recordedAt?: string;
+    reason?: string;
+  }) {
+    if (data.status === "approved") {
+      setCheckpointLabel(data.checkpoint ?? null);
+      setRegisteredAt(new Date().toISOString());
+      setStage("aprovado");
+      return;
+    }
+
+    // O servidor encontrou uma presença que já existia (ou barrou a segunda
+    // gravação simultânea): isso não é recusa, é o estado atual do check-in.
+    if (data.status === "already_registered") {
+      setCheckpointLabel(data.checkpoint ?? checkpointLabel);
+      setRegisteredAt(data.recordedAt ?? null);
+      setStage("ja-registrado");
+      return;
+    }
+
+    if (data.reason === "nao_autenticado") {
+      router.replace("/entrar");
+      return;
+    }
+
+    setMessage(
+      (data.reason && REJECTION_MESSAGES[data.reason]) ?? "Não foi possível registrar sua presença.",
+    );
+    setStage("rejeitado");
   }
 
   const isConfirmed = stage === "aprovado" || stage === "ja-registrado";
@@ -194,6 +301,16 @@ export function CheckinFlow({
             <div className="flex flex-col items-center gap-3 py-4">
               <Loader2 className="h-8 w-8 animate-spin text-unisanta-navy" />
               <p className="text-sm text-zinc-500">Validando presença...</p>
+            </div>
+          )}
+
+          {stage === "tentando-novamente" && (
+            <div className="flex flex-col items-center gap-3 py-4">
+              <Loader2 className="h-8 w-8 animate-spin text-unisanta-navy" />
+              <p className="text-sm text-zinc-500">
+                Tentando novamente... (tentativa {attempt} de {MAX_ATTEMPTS})
+              </p>
+              <p className="text-xs text-zinc-400">Não feche nem recarregue a página.</p>
             </div>
           )}
 
