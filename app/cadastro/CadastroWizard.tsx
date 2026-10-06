@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
@@ -20,6 +20,7 @@ const STEPS: { key: Step; label: string }[] = [
 
 export function CadastroWizard() {
   const router = useRouter();
+  const [navigating, startNavigating] = useTransition();
   const consentTextRef = useRef<HTMLDivElement>(null);
   const [step, setStep] = useState<Step>("consentimento");
   const [consentChecked, setConsentChecked] = useState(false);
@@ -116,7 +117,12 @@ export function CadastroWizard() {
                 Cadastro concluído! Agora você já pode registrar presença nos eventos
                 lendo o QR Code exibido no local.
               </p>
-              <Button type="button" onClick={() => router.push("/eventos")} className="w-full">
+              <Button
+                type="button"
+                onClick={() => startNavigating(() => router.push("/eventos"))}
+                loading={navigating}
+                className="w-full"
+              >
                 Ver eventos
               </Button>
             </div>

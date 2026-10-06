@@ -193,7 +193,7 @@ export async function createEvent(formData: FormData) {
     redirect(`/admin/events/${data.id}?error=${encodeURIComponent(checkpointsInsertError.message)}`);
   }
 
-  redirect(`/admin/events/${data.id}`);
+  redirect(`/admin/events/${data.id}?ok=evento-criado`);
 }
 
 /**
@@ -274,6 +274,9 @@ export async function syncCheckpoints(eventId: string, redirectPath: string, for
 
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath(`/admin/events/${eventId}/moments`);
+  // O redirect devolve o admin para a mesma tela com `?ok=`, que o <Toaster />
+  // transforma no aviso "Momentos de presença salvos." (ver lib/toast.ts).
+  redirect(`${redirectPath}?ok=momentos-salvos`);
 }
 
 /**

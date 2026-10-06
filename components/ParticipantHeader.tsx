@@ -1,7 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
-import { CalendarDays, CalendarCheck, UserCog, LogOut } from "lucide-react";
+import { CalendarDays, CalendarCheck, UserCog } from "lucide-react";
 import { signOutParticipant } from "@/app/actions";
+import { SignOutButton } from "@/components/SignOutButton";
 
 export function ParticipantHeader() {
   return (
@@ -35,13 +36,7 @@ export function ParticipantHeader() {
           <span className="hidden sm:inline">Meus dados</span>
         </Link>
         <form action={signOutParticipant}>
-          <button
-            type="submit"
-            className="ml-1 flex items-center gap-1.5 rounded-lg border border-white/20 px-3 py-1.5 transition-colors hover:bg-white/10"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Sair</span>
-          </button>
+          <SignOutButton className="ml-1" hideLabelOnMobile />
         </form>
       </nav>
     </header>

@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { LogOut } from "lucide-react";
+import { SignOutButton } from "@/components/SignOutButton";
 import { createClient } from "@/lib/supabase/server";
 import { signOutAdmin } from "./actions";
 
@@ -22,13 +22,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         {user && (
           <form action={signOutAdmin} className="flex items-center gap-4">
             <span className="hidden text-sm text-zinc-300 sm:inline">{user.email}</span>
-            <button
-              type="submit"
-              className="flex items-center gap-1.5 rounded-lg border border-white/20 px-3 py-1.5 text-sm transition-colors hover:bg-white/10"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              Sair
-            </button>
+            <SignOutButton className="text-sm" />
           </form>
         )}
       </header>

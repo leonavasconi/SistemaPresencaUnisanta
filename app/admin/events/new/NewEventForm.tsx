@@ -5,7 +5,7 @@ import { ArrowRight, RefreshCw } from "lucide-react";
 import { createEvent } from "../actions";
 import { Card } from "@/components/ui/Card";
 import { Input, Textarea, Label } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { CheckpointsEditor } from "../_components/CheckpointsEditor";
 import { EventSchedule } from "../_components/EventSchedule";
 import { GeofenceEditor } from "../_components/GeofenceEditor";
@@ -99,14 +99,13 @@ export function NewEventForm({ error, presets }: { error?: string; presets: Geof
         {checkpointsError && <p className="text-xs text-unisanta-red">{checkpointsError}</p>}
       </Card>
 
-      <Button
-        type="submit"
+      <SubmitButton
         className="w-full sm:w-fit sm:self-end"
         disabled={Boolean(geofenceError) || Boolean(checkpointsError)}
       >
         Criar evento
         <ArrowRight className="h-4 w-4" />
-      </Button>
+      </SubmitButton>
     </form>
   );
 }
