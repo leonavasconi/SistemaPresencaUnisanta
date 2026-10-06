@@ -1,13 +1,12 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getSessionUser } from "@/lib/supabase/auth";
 import { ENROLLMENT_COLUMNS, isEnrollmentComplete } from "@/lib/enrollment";
 import { CadastroWizard } from "./CadastroWizard";
 
 export default async function CadastroPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSessionUser(supabase);
 
   if (user) {
     // Mesma regra usada pelo middleware (lib/enrollment.ts): quem já concluiu

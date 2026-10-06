@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { CheckCircle2, MapPin, Clock, QrCode } from "lucide-react";
 import { ParticipantHeader } from "@/components/ParticipantHeader";
 import { createClient } from "@/lib/supabase/server";
+import { getSessionUser } from "@/lib/supabase/auth";
 import { PageHeader, Card } from "@/components/ui/Card";
 import { formatDateTimeBR, formatTimeBR, endOfClosingMinute } from "@/lib/datetime";
 import { isUsableGeofence, parseGeofencePoints } from "@/lib/geo/polygon";
@@ -24,9 +25,10 @@ function momentoStatus(opensAt: string, closesAt: string, hasLocation: boolean) 
 export default async function EventoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSessionUser(supabase);
+  // Sem sessão válida (token ausente/expirado), nada de consultar com id
+  // vazio — isso gerava centenas de erros "invalid input syntax for type uuid".
+  if (!user) redirect("/entrar");
 
   const { data: event } = await supabase
     .from("eventos")
@@ -42,7 +44,7 @@ export default async function EventoPage({ params }: { params: Promise<{ id: str
   const { data: myRecords } = await supabase
     .from("registros_presenca")
     .select("momento_id")
-    .eq("participante_id", user?.id ?? "");
+    .eq("participante_id", user.id);
   const registeredMomentoIds = new Set((myRecords ?? []).map((r) => r.momento_id));
 
   return (

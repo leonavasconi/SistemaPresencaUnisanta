@@ -183,17 +183,23 @@ Deno.serve(async (req: Request) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  // Identifica o participante a partir do JWT enviado pelo app.
+  // Identifica o participante a partir do JWT enviado pelo app. `getClaims`
+  // valida a assinatura localmente (chaves JWT assimétricas), sem a ida ao
+  // servidor de Auth que `getUser` fazia em todo check-in — no pico da
+  // abertura isso somava milhares de chamadas e derrubava o Auth (504/503).
+  const accessToken = authHeader.replace(/^Bearer\s+/i, "");
+  if (!accessToken) {
+    return reject("nao_autenticado");
+  }
   const anonForAuth = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: authHeader } } },
   );
-  const { data: userData, error: userError } = await anonForAuth.auth.getUser();
-  if (userError || !userData?.user) {
+  const { data: claimsData, error: claimsError } = await anonForAuth.auth.getClaims(accessToken);
+  const participantId = claimsData?.claims?.sub;
+  if (claimsError || typeof participantId !== "string" || !participantId) {
     return reject("nao_autenticado");
   }
-  const participantId = userData.user.id;
 
   let payload: CheckinPayload;
   try {

@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { ENROLLMENT_COLUMNS, isEnrollmentComplete } from "@/lib/enrollment";
+import { getSessionUser } from "@/lib/supabase/auth";
 
 /** Onde o participante conclui consentimento e biometria. */
 const ENROLLMENT_ROUTE = "/cadastro";
@@ -46,13 +47,13 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Valida o JWT localmente (sem ir ao servidor de Auth) e renova os cookies
+  // de sessão quando o token expira. Ver lib/supabase/auth.ts.
+  const user = await getSessionUser(supabase);
 
   const path = request.nextUrl.pathname;
 
-  // Preserva os cookies de sessão renovados pelo `getUser` acima — sem isso,
+  // Preserva os cookies de sessão renovados pelo `getClaims` acima — sem isso,
   // um redirecionamento que acontece logo após a renovação do token descarta
   // o token novo e derruba a sessão do usuário.
   function redirectTo(destination: string) {

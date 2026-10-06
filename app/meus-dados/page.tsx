@@ -1,22 +1,25 @@
+import { redirect } from "next/navigation";
 import { ShieldAlert } from "lucide-react";
 import { ParticipantHeader } from "@/components/ParticipantHeader";
 import { createClient } from "@/lib/supabase/server";
+import { getSessionUser } from "@/lib/supabase/auth";
 import { PageHeader, Card } from "@/components/ui/Card";
 import { formatDateTimeBR } from "@/lib/datetime";
 import { DeleteDataButton } from "./DeleteDataButton";
 
 export default async function MeusDadosPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSessionUser(supabase);
+  // Sem sessão válida (token ausente/expirado), nada de consultar com id
+  // vazio — isso gerava centenas de erros "invalid input syntax for type uuid".
+  if (!user) redirect("/entrar");
 
   const { data: participant } = await supabase
     .from("participantes")
     .select(
       "nome_completo, aluno_unisanta, instituicao, matricula, curso, sala, consentimento_em, versao_consentimento",
     )
-    .eq("id", user?.id ?? "")
+    .eq("id", user.id)
     .maybeSingle();
 
   const isUnisantaStudent = !!participant?.aluno_unisanta;
@@ -30,7 +33,7 @@ export default async function MeusDadosPage() {
         <Card className="max-w-lg p-6">
           <dl className="flex flex-col gap-3 text-sm">
             <Row label="Nome completo" value={participant?.nome_completo} />
-            <Row label="E-mail" value={user?.email} />
+            <Row label="E-mail" value={user.email} />
             <Row label="Aluno Unisanta" value={isUnisantaStudent ? "Sim" : "Não"} />
 
             {/* Dados acadêmicos só existem para alunos da Unisanta — para os

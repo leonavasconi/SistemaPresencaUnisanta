@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getSessionUser } from "@/lib/supabase/auth";
 import { CheckinFlow } from "./CheckinFlow";
 
 export default async function CheckinPage({
@@ -9,9 +10,7 @@ export default async function CheckinPage({
   const { token } = await params;
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSessionUser(supabase);
 
   // Resolve o momento pelo QR e verifica, já no servidor, se este
   // participante tem presença registrada nele. É isso que faz a página abrir
