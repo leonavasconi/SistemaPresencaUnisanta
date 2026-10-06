@@ -15,9 +15,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Unisanta Presença",
   description: "Registro de presença por geolocalização e biometria facial — Unisanta",
-  icons: {
-    icon: "/logo-unisanta.png",
-  },
 };
 
 export const viewport: Viewport = {
