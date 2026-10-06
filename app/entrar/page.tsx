@@ -5,6 +5,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Input, Label } from "@/components/ui/Input";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { emailDeLoginLembrado } from "@/lib/auth/login-email";
 import { signIn } from "./actions";
 
 /**
@@ -16,6 +17,8 @@ export default async function ParticipantLoginPage({
   searchParams: Promise<{ error?: string; mensagem?: string }>;
 }) {
   const { error, mensagem } = await searchParams;
+  // Depois de um login que falhou, o e-mail volta preenchido e só a senha em branco.
+  const email = await emailDeLoginLembrado();
 
   return (
     <AuthCard
@@ -38,6 +41,7 @@ export default async function ParticipantLoginPage({
               type="email"
               required
               autoComplete="email"
+              defaultValue={email}
               placeholder="nome@dominio.com"
             />
           </div>
@@ -59,6 +63,8 @@ export default async function ParticipantLoginPage({
               name="password"
               required
               autoComplete="current-password"
+              // E-mail já preenchido: quem errou só precisa digitar a senha de novo.
+              autoFocus={email !== ""}
               placeholder="Sua senha"
             />
           </div>
