@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Plus, Calendar, ArrowRight, CalendarX } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/Card";
+import { EventListFilter } from "@/components/EventListFilter";
+import { ordenarEventos } from "@/lib/event-order";
 import { Button } from "@/components/ui/Button";
 import { formatDateBR, formatTimeBR } from "@/lib/datetime";
 
@@ -33,9 +35,14 @@ export default async function AdminEventsPage() {
           <p className="text-sm text-zinc-500">Nenhum evento cadastrado ainda.</p>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {events.map((event) => (
-            <Link key={event.id} href={`/admin/events/${event.id}`}>
+        <EventListFilter
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          items={ordenarEventos(events).map((event) => ({
+            id: event.id,
+            searchText: event.nome,
+            encerrado: event.encerrado,
+            node: (
+            <Link href={`/admin/events/${event.id}`}>
               <Card className="flex h-full flex-col gap-3 p-5 transition-shadow hover:shadow-md">
                 <div className="flex items-start justify-between gap-2">
                   <h2 className="font-semibold text-zinc-800">{event.nome}</h2>
@@ -54,8 +61,9 @@ export default async function AdminEventsPage() {
                 </div>
               </Card>
             </Link>
-          ))}
-        </div>
+            ),
+          }))}
+        />
       )}
     </div>
   );

@@ -5,6 +5,8 @@ import { ParticipantHeader } from "@/components/ParticipantHeader";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionUser } from "@/lib/supabase/auth";
 import { PageHeader, Card } from "@/components/ui/Card";
+import { EventListFilter } from "@/components/EventListFilter";
+import { ordenarEventos } from "@/lib/event-order";
 import { eventMatchesAudience } from "@/lib/audience";
 import { formatDateTimeBR, formatTimeBR, endOfClosingMinute } from "@/lib/datetime";
 import { isUsableGeofence, parseGeofencePoints } from "@/lib/geo/polygon";
@@ -49,8 +51,10 @@ export default async function EventosPage() {
     .eq("participante_id", user.id);
   const registeredMomentoIds = new Set((myRecords ?? []).map((r) => r.momento_id));
 
-  const visibleEvents = (events ?? []).filter((event) =>
-    eventMatchesAudience(event, { curso: participant?.curso, sala: participant?.sala }),
+  const visibleEvents = ordenarEventos(
+    (events ?? []).filter((event) =>
+      eventMatchesAudience(event, { curso: participant?.curso, sala: participant?.sala }),
+    ),
   );
 
   return (
@@ -65,14 +69,19 @@ export default async function EventosPage() {
             <p className="text-sm text-zinc-500">Nenhum evento disponível no momento.</p>
           </Card>
         ) : (
-          <div className="flex flex-col gap-4">
-            {visibleEvents.map((event) => {
+          <EventListFilter
+            className="flex flex-col gap-4"
+            items={visibleEvents.map((event) => {
               const momentos = [...(event.momentos_presenca ?? [])].sort(
                 (a, b) => a.ordem - b.ordem,
               );
               const hasLocation = isUsableGeofence(parseGeofencePoints(event.pontos_geofence));
-              return (
-                <Card key={event.id} className="flex flex-col gap-3 p-5">
+              return {
+                id: event.id,
+                searchText: `${event.nome} ${event.descricao ?? ""}`,
+                encerrado: event.encerrado,
+                node: (
+                <Card className="flex flex-col gap-3 p-5">
                   <div>
                     <h2 className="font-semibold text-zinc-800">{event.nome}</h2>
                     {event.descricao && (
@@ -133,9 +142,10 @@ export default async function EventosPage() {
                     </div>
                   )}
                 </Card>
-              );
+                ),
+              };
             })}
-          </div>
+          />
         )}
 
         <p className="text-center text-xs text-zinc-400">
