@@ -1,4 +1,14 @@
 // Supabase Edge Function: checkin
+//
+// DEPRECADA desde a migration 0010: o check-in passou a rodar como a função
+// RPC `fazer_checkin` no próprio Postgres (uma transação, uma ida ao banco em
+// vez de ~9), e o cliente agora chama `supabase.rpc("fazer_checkin", ...)`.
+// Esta função é mantida apenas como caminho de rollback — reverter o cliente
+// para `supabase.functions.invoke("checkin", ...)` volta ao comportamento
+// anterior sem precisar de novo deploy do banco. Pode ser removida depois que
+// a RPC estiver validada em produção. A lógica abaixo e a de 0010 devem ser
+// mantidas em paridade enquanto as duas coexistirem.
+//
 // Valida e grava um registro de presença. É a ÚNICA rota que escreve em
 // `registros_presenca` — o cliente nunca insere diretamente (ver RLS em
 // 0001_init.sql), então toda a checagem de fraude vive aqui, no servidor.
