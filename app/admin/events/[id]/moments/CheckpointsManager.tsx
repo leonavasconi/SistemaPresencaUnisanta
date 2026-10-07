@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { RefreshCw, Save } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { CheckpointsEditor } from "../../_components/CheckpointsEditor";
 import {
   computeDefaultCheckpoints,
@@ -71,14 +71,13 @@ export function CheckpointsManager({
       {(checkpointsError || lockedError) && (
         <p className="text-xs text-unisanta-red">{checkpointsError ?? lockedError}</p>
       )}
-      <Button
-        type="submit"
+      <SubmitButton
         className="w-full sm:w-fit sm:self-end"
         disabled={Boolean(checkpointsError) || Boolean(lockedError)}
       >
         <Save className="h-4 w-4" />
         Salvar momentos
-      </Button>
+      </SubmitButton>
     </form>
   );
 }

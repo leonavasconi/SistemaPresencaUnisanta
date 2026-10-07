@@ -23,6 +23,8 @@
   --color-unisanta-navy: var(--color-unisanta-navy);
   --color-unisanta-navy-dark: var(--color-unisanta-navy-dark);
   --color-unisanta-navy-light: var(--color-unisanta-navy-light);
+
+  --animate-nav-progress: nav-progress 12s cubic-bezier(0.1, 0.6, 0.2, 1) forwards;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -42,6 +44,26 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Barra de progresso de navegação (components/NavigationProgress.tsx): avança
+   rápido no começo e desacelera, e se apaga sozinha se a navegação não terminar. */
+@keyframes nav-progress {
+  0% {
+    width: 0;
+    opacity: 1;
+  }
+  15% {
+    width: 55%;
+  }
+  85% {
+    width: 90%;
+    opacity: 1;
+  }
+  100% {
+    width: 92%;
+    opacity: 0;
   }
 }
 

@@ -4,13 +4,13 @@ import QRCode from "qrcode";
 import { ArrowLeft, Download, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
 import { formatDateTimeBR, toDatetimeLocalValue } from "@/lib/datetime";
 import { computeDefaultCheckpoints, type CheckpointDraft } from "@/lib/checkpoints";
 import { parseGeofencePoints } from "@/lib/geo/polygon";
 import { syncCheckpoints, updateEventGeofence, getGeofencePresets } from "../actions";
 import { CheckpointsManager } from "./moments/CheckpointsManager";
 import { GeofencePanel } from "./GeofencePanel";
+import { ExportButton } from "./ExportButton";
 
 export default async function EventDashboardPage({
   params,
@@ -96,25 +96,7 @@ export default async function EventDashboardPage({
             ? `${formatDateTimeBR(new Date(event.inicio_em))} — ${formatDateTimeBR(new Date(event.fim_em))}`
             : undefined
         }
-        action={
-          <form
-            action={`/admin/events/${eventId}/export`}
-            className="flex flex-col gap-2 sm:flex-row sm:items-center"
-          >
-            <select
-              name="format"
-              defaultValue="csv"
-              className="h-11 rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none focus:border-unisanta-navy focus:ring-2 focus:ring-unisanta-navy/15"
-            >
-              <option value="csv">CSV</option>
-              <option value="xlsx">XLSX</option>
-            </select>
-            <Button type="submit" className="w-full sm:w-auto">
-              <Download className="h-4 w-4" />
-              Exportar
-            </Button>
-          </form>
-        }
+        action={<ExportButton eventId={eventId} />}
       />
 
       {error && (

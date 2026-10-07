@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { GeofenceEditor } from "../_components/GeofenceEditor";
 import { validateGeofenceArea } from "@/lib/geo/polygon";
+import { showToast } from "@/lib/toast";
 
 type GeoPoint = { lat: number; lng: number };
 type GeofencePreset = { id: string; nome: string; pontos: GeoPoint[] };
@@ -53,6 +54,7 @@ export function GeofencePanel({
         setError(result.error);
         return;
       }
+      showToast("Área de check-in salva.");
       router.refresh();
     });
   }

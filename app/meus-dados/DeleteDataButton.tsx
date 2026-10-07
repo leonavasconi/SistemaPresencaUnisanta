@@ -1,8 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { useFormStatus } from "react-dom";
+import { Loader2, Trash2 } from "lucide-react";
 import { deleteMyData } from "./actions";
+
+/** Fica dentro do `<form>`: o `useFormStatus` bloqueia o botão enquanto os dados são apagados. */
+function ConfirmDeleteButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      aria-busy={pending || undefined}
+      className="flex w-full items-center justify-center gap-2 rounded-lg bg-unisanta-red px-4 py-2.5 text-sm font-medium text-white transition-colors hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
+    >
+      {pending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+      {pending ? "Excluindo..." : "Sim, excluir"}
+    </button>
+  );
+}
 
 export function DeleteDataButton() {
   const [isOpen, setIsOpen] = useState(false);
@@ -40,12 +58,7 @@ export function DeleteDataButton() {
                 Cancelar
               </button>
               <form action={deleteMyData} className="flex-1">
-                <button
-                  type="submit"
-                  className="w-full rounded-lg bg-unisanta-red px-4 py-2.5 text-sm font-medium text-white transition-colors hover:brightness-110"
-                >
-                  Sim, excluir
-                </button>
+                <ConfirmDeleteButton />
               </form>
             </div>
           </div>
