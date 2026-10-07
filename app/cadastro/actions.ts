@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { apagarCrachaDeAcesso } from "@/lib/supabase/acesso-cache-server";
 import { CONSENT_VERSION } from "@/lib/consent";
 
 export type EnrollmentInput = {
@@ -62,6 +63,10 @@ export async function saveEnrollment(input: EnrollmentInput) {
     acao: "concedido",
     endereco_ip: ip,
   });
+
+  // O cadastro acabou de ser concluído. "Incompleto" nunca entra no crachá,
+  // mas apagar garante que nenhum crachá antigo contradiga o estado novo.
+  await apagarCrachaDeAcesso();
 
   return { error: null };
 }

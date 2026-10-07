@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { apagarCrachaDeAcesso } from "@/lib/supabase/acesso-cache-server";
 import { parseEmail } from "@/lib/validation/email";
 import { traduzErroAuth } from "@/lib/auth/errors";
 import { esquecerEmailDeLogin, lembrarEmailDeLogin } from "@/lib/auth/login-email";
@@ -27,6 +28,11 @@ export async function signIn(formData: FormData) {
   if (error || !data.user) {
     falhou(traduzErroAuth(error?.message, "E-mail ou senha incorretos."));
   }
+
+  // A sessão mudou: um crachá de acesso anterior (de outra conta, por exemplo)
+  // não vale mais. Também cobre o ramo abaixo em que a conta é recusada e a
+  // sessão é encerrada.
+  await apagarCrachaDeAcesso();
 
   // A separação entre os dois acessos não é só visual: uma conta de
   // administrador não entra pela porta do participante, mesmo com a senha
