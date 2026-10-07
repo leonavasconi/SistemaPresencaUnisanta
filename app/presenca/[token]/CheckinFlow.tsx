@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2, CheckCircle2, AlertTriangle, XCircle, MapPin, ScanFace } from "lucide-react";
-import { FunctionsFetchError, FunctionsHttpError, FunctionsRelayError } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { getDeviceFingerprint } from "@/lib/device/fingerprint";
 import { FaceCapture } from "@/components/FaceCapture";
@@ -78,23 +77,65 @@ function sleep(ms: number, signal: AbortSignal) {
   });
 }
 
+type CheckinResult = {
+  status: string;
+  checkpoint?: string;
+  recordedAt?: string;
+  reason?: string;
+};
+
+type CheckinParams = {
+  p_qr_token: string;
+  p_descriptor: number[];
+  p_latitude: number;
+  p_longitude: number;
+  p_accuracy_meters: number;
+  p_device_hash: string;
+};
+
 /**
- * Falha de infraestrutura que vale repetir: timeout/rede (o abort do timeout
- * chega como FunctionsFetchError), erro do relay, 5xx e 429. O servidor
- * responde as recusas de negócio com HTTP 200, então não passam por aqui.
+ * Chama a função `fazer_checkin` no Postgres (RPC) com prazo próprio por
+ * tentativa. Toda a validação roda numa única ida ao banco, dentro de uma
+ * transação — antes eram ~9 consultas sequenciais numa Edge Function, o que no
+ * pico de abertura saturava as conexões do Supabase. Recusas de negócio voltam
+ * em `data` com HTTP 200; só falha de infra vem em `error`, e é o `status` que
+ * diz se vale repetir (`status: 0` = timeout da tentativa ou rede).
  */
-function isTransientError(error: unknown) {
-  if (error instanceof FunctionsFetchError || error instanceof FunctionsRelayError) return true;
-  if (error instanceof FunctionsHttpError) {
-    const status = (error.context as Response).status;
-    return status >= 500 || status === 429;
+async function invokeCheckin(
+  supabase: ReturnType<typeof createClient>,
+  params: CheckinParams,
+  outerSignal: AbortSignal,
+): Promise<{ data: CheckinResult | null; status: number }> {
+  const attempt = new AbortController();
+  const relayAbort = () => attempt.abort();
+  outerSignal.addEventListener("abort", relayAbort, { once: true });
+  const timer = setTimeout(() => attempt.abort(), ATTEMPT_TIMEOUT_MS);
+  try {
+    const { data, error, status } = await supabase
+      .rpc("fazer_checkin", params)
+      .abortSignal(attempt.signal);
+    if (error) return { data: null, status };
+    return { data: data as CheckinResult | null, status };
+  } catch {
+    return { data: null, status: 0 };
+  } finally {
+    clearTimeout(timer);
+    outerSignal.removeEventListener("abort", relayAbort);
   }
-  return false;
 }
 
-/** Gateway recusou o token (401): sessão inválida, repetir não adianta. */
-function isUnauthorizedError(error: unknown) {
-  return error instanceof FunctionsHttpError && (error.context as Response).status === 401;
+/** 401: o token foi recusado (sessão expirada); repetir não adianta. */
+function isUnauthorized(status: number) {
+  return status === 401;
+}
+
+/**
+ * Falha de infraestrutura que vale repetir: rede/timeout da tentativa
+ * (status 0), sobrecarga (429) e erros de servidor (5xx). As recusas de
+ * negócio voltam em `data` com HTTP 200, então nunca chegam aqui.
+ */
+function isTransient(status: number) {
+  return status === 0 || status === 429 || status >= 500;
 }
 
 export function CheckinFlow({
@@ -189,34 +230,30 @@ export function CheckinFlow({
     try {
       const supabase = createClient();
       const deviceHash = await getDeviceFingerprint();
-      const body = {
-        qrToken: token,
-        descriptor,
-        latitude: coords.lat,
-        longitude: coords.lng,
-        accuracyMeters: coords.accuracy,
-        deviceHash,
+      const params: CheckinParams = {
+        p_qr_token: token,
+        p_descriptor: descriptor,
+        p_latitude: coords.lat,
+        p_longitude: coords.lng,
+        p_accuracy_meters: coords.accuracy,
+        p_device_hash: deviceHash,
       };
 
       for (let n = 1; n <= MAX_ATTEMPTS; n++) {
-        const { data, error } = await supabase.functions.invoke("checkin", {
-          body,
-          timeout: ATTEMPT_TIMEOUT_MS,
-          signal: controller.signal,
-        });
+        const { data, status } = await invokeCheckin(supabase, params, controller.signal);
         if (controller.signal.aborted) return;
 
-        if (!error && data) {
+        if (data) {
           handleResult(data);
           return;
         }
 
-        if (isUnauthorizedError(error)) {
+        if (isUnauthorized(status)) {
           router.replace("/entrar");
           return;
         }
 
-        if (!isTransientError(error)) {
+        if (!isTransient(status)) {
           setStage("erro");
           setMessage("Erro inesperado ao registrar a presença. Tente novamente.");
           return;
@@ -243,12 +280,7 @@ export function CheckinFlow({
   }
 
   /** Resposta definitiva do servidor (HTTP 200): mostra o resultado na hora, sem retry. */
-  function handleResult(data: {
-    status: string;
-    checkpoint?: string;
-    recordedAt?: string;
-    reason?: string;
-  }) {
+  function handleResult(data: CheckinResult) {
     if (data.status === "approved") {
       setCheckpointLabel(data.checkpoint ?? null);
       setRegisteredAt(new Date().toISOString());
