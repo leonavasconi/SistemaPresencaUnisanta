@@ -26,13 +26,53 @@ const ADMIN_LOGIN = "/admin/entrar";
 // própria, e redirecionar quem está no meio dela quebraria o fluxo.
 const PUBLIC_ROUTES = ["/esqueci-senha", "/redefinir-senha", "/auth/"];
 
+// Prazo de cada chamada ao Supabase feita pelo proxy (refresh de sessão,
+// busca do JWKS, consultas a perfis/participantes). Sem ele, um Auth ou banco
+// engasgados seguravam a requisição até o limite da função (300 s) e
+// derrubavam todas as rotas. Estourar o prazo cai no mesmo tratamento de
+// "indisponível" (ver `degradar`).
+const SUPABASE_TIMEOUT_MS = 3000;
+
+// Prazo TOTAL da requisição no proxy, somando sessão e consultas. O de cima não
+// basta: o supabase-js repete o refresh de sessão (backoff de até ~30 s) e o
+// cliente do banco repete as consultas, e cada tentativa ganha um prazo novo.
+const PRAZO_TOTAL_MS = 4000;
+const PRAZO_ESTOUROU = Symbol("prazo-estourou");
+
+const fetchComTimeout: typeof fetch = (input, init) => {
+  const prazo = AbortSignal.timeout(SUPABASE_TIMEOUT_MS);
+  const signal = init?.signal ? AbortSignal.any([init.signal, prazo]) : prazo;
+  return fetch(input, { ...init, signal });
+};
+
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
+
+  const inicio = Date.now();
+
+  /** Espera o trabalho só até o prazo total da requisição; passou disso, devolve PRAZO_ESTOUROU. */
+  function comPrazo<T>(trabalho: PromiseLike<T>): Promise<T | typeof PRAZO_ESTOUROU> {
+    const restante = Math.max(0, PRAZO_TOTAL_MS - (Date.now() - inicio));
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => resolve(PRAZO_ESTOUROU), restante);
+      Promise.resolve(trabalho).then(
+        (valor) => {
+          clearTimeout(timer);
+          resolve(valor);
+        },
+        () => {
+          clearTimeout(timer);
+          resolve(PRAZO_ESTOUROU);
+        },
+      );
+    });
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      global: { fetch: fetchComTimeout },
       cookies: {
         getAll() {
           return request.cookies.getAll();
@@ -50,7 +90,7 @@ export async function updateSession(request: NextRequest) {
 
   // Valida o JWT localmente (sem ir ao servidor de Auth) e renova os cookies
   // de sessão quando o token expira. Ver lib/supabase/auth.ts.
-  const session = await getSessionState(supabase);
+  const session = await comPrazo(getSessionState(supabase));
 
   const path = request.nextUrl.pathname;
 
@@ -107,7 +147,7 @@ export async function updateSession(request: NextRequest) {
     return ocupado;
   }
 
-  if (session.status === "unavailable") return degradar();
+  if (session === PRAZO_ESTOUROU || session.status === "unavailable") return degradar();
   const user = session.status === "authenticated" ? session.user : null;
 
   if (isAdminProtected && !user) return redirectTo(ADMIN_LOGIN);
@@ -119,15 +159,13 @@ export async function updateSession(request: NextRequest) {
     return semCache(response);
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from("perfis")
-    .select("id")
-    .eq("id", user.id)
-    .maybeSingle();
-  // Erro na consulta (timeout, banco lento) não é "não é admin": sem esta
+  const perfil = await comPrazo(
+    supabase.from("perfis").select("id").eq("id", user.id).maybeSingle(),
+  );
+  // Erro ou prazo estourado na consulta não é "não é admin": sem esta
   // checagem o participante seria tratado como não-admin e redirecionado.
-  if (profileError) return degradar();
-  const isAdmin = !!profile;
+  if (perfil === PRAZO_ESTOUROU || perfil.error) return degradar();
+  const isAdmin = !!perfil.data;
 
   // Sessão sem perfil de administrador não entra na área administrativa,
   // mesmo autenticada com sucesso.
@@ -142,15 +180,13 @@ export async function updateSession(request: NextRequest) {
   // Sem esta checagem, bastava voltar uma página no navegador depois de criar
   // a conta para cair em /eventos com o cadastro pela metade.
   if (!isAdmin && (isParticipantRoute || isParticipantAuth) && !path.startsWith(ENROLLMENT_ROUTE)) {
-    const { data: participante, error: participanteError } = await supabase
-      .from("participantes")
-      .select(ENROLLMENT_COLUMNS)
-      .eq("id", user.id)
-      .maybeSingle();
-    // Mesmo cuidado: erro de consulta não é "cadastro incompleto".
-    if (participanteError) return degradar();
+    const cadastro = await comPrazo(
+      supabase.from("participantes").select(ENROLLMENT_COLUMNS).eq("id", user.id).maybeSingle(),
+    );
+    // Mesmo cuidado: erro ou prazo estourado não é "cadastro incompleto".
+    if (cadastro === PRAZO_ESTOUROU || cadastro.error) return degradar();
 
-    if (!isEnrollmentComplete(participante)) return redirectTo(ENROLLMENT_ROUTE);
+    if (!isEnrollmentComplete(cadastro.data)) return redirectTo(ENROLLMENT_ROUTE);
   }
 
   // Quem já está autenticado não precisa ver tela de login. Participantes vão
