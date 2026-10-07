@@ -265,34 +265,10 @@ Deno.serve(async (req: Request) => {
     return reject("fora_da_janela_de_horario");
   }
 
-  // 3.1. Conflito com outro evento na mesma janela (percebido pelo professor:
-  // dois eventos distintos podem usar o mesmo espaço em horários diferentes,
-  // mas nenhum participante pode estar fisicamente em dois lugares ao mesmo
-  // tempo). Rejeita se este participante já tem presença aprovada em OUTRO
-  // evento cujo momento se sobrepõe ao horário deste momento — não importa
-  // se a janela do outro evento ainda está aberta agora, o que importa é que
-  // as duas janelas se cruzam.
-  const { data: otherRecords } = await supabase
-    .from("registros_presenca")
-    .select("evento_id, momentos_presenca(abre_em, fecha_em)")
-    .eq("participante_id", participantId)
-    .eq("situacao", "aprovado")
-    .neq("evento_id", checkpoint.evento_id);
-
-  const thisOpensAt = new Date(checkpoint.abre_em).getTime();
-  const thisClosesAt = new Date(checkpoint.fecha_em).getTime();
-  const hasConflict = (otherRecords ?? []).some((record) => {
-    const other = Array.isArray(record.momentos_presenca)
-      ? record.momentos_presenca[0]
-      : record.momentos_presenca;
-    if (!other) return false;
-    const otherOpensAt = new Date(other.abre_em).getTime();
-    const otherClosesAt = new Date(other.fecha_em).getTime();
-    return otherOpensAt < thisClosesAt && thisOpensAt < otherClosesAt;
-  });
-  if (hasConflict) {
-    return reject("janela_conflitante_outro_evento");
-  }
+  // Não há mais checagem de conflito com presença em OUTRO evento no mesmo
+  // horário (antiga regra 3.1): a coordenação concentra os momentos de todos
+  // os eventos na mesma janela (21h10–22h) e o mesmo participante pode
+  // confirmar presença em mais de um deles.
 
   // 4. Evento + área (3.3).
   const { data: event, error: eventError } = await supabase
