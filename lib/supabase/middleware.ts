@@ -1,6 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { cadastroEstaCompleto } from "@/lib/enrollment";
+import {
+  COOKIE_ACESSO,
+  OPCOES_COOKIE_ACESSO,
+  VALIDADE_CRACHA_S,
+  emitirCracha,
+  lerCracha,
+} from "@/lib/supabase/acesso-cache";
 import { getSessionState } from "@/lib/supabase/auth";
 import { paginaSistemaOcupado } from "@/lib/supabase/sistema-ocupado";
 
@@ -159,13 +166,30 @@ export async function updateSession(request: NextRequest) {
     return semCache(response);
   }
 
-  const perfil = await comPrazo(
-    supabase.from("perfis").select("id").eq("id", user.id).maybeSingle(),
-  );
-  // Erro ou prazo estourado na consulta não é "não é admin": sem esta
-  // checagem o participante seria tratado como não-admin e redirecionado.
-  if (perfil === PRAZO_ESTOUROU || perfil.error) return degradar();
-  const isAdmin = !!perfil.data;
+  // Crachá válido (assinatura, validade e mesma conta) dispensa as consultas
+  // abaixo. Ver lib/supabase/acesso-cache.ts.
+  const cracha = await lerCracha(request.cookies.get(COOKIE_ACESSO)?.value, user.id);
+
+  /** Grava o crachá no navegador. Sem PROXY_COOKIE_SECRET não faz nada. */
+  async function guardarCracha(uid: string, admin: boolean, completo: boolean) {
+    const exp = Math.floor(Date.now() / 1000) + VALIDADE_CRACHA_S;
+    const valor = await emitirCracha({ uid, admin, completo, exp });
+    if (valor) response.cookies.set(COOKIE_ACESSO, valor, OPCOES_COOKIE_ACESSO);
+  }
+
+  let isAdmin: boolean;
+  if (cracha) {
+    isAdmin = cracha.admin;
+  } else {
+    const perfil = await comPrazo(
+      supabase.from("perfis").select("id").eq("id", user.id).maybeSingle(),
+    );
+    // Erro ou prazo estourado na consulta não é "não é admin": sem esta
+    // checagem o participante seria tratado como não-admin e redirecionado.
+    if (perfil === PRAZO_ESTOUROU || perfil.error) return degradar();
+    isAdmin = !!perfil.data;
+    if (isAdmin) await guardarCracha(user.id, true, false);
+  }
 
   // Sessão sem perfil de administrador não entra na área administrativa,
   // mesmo autenticada com sucesso.
@@ -180,11 +204,16 @@ export async function updateSession(request: NextRequest) {
   // Sem esta checagem, bastava voltar uma página no navegador depois de criar
   // a conta para cair em /eventos com o cadastro pela metade.
   if (!isAdmin && (isParticipantRoute || isParticipantAuth) && !path.startsWith(ENROLLMENT_ROUTE)) {
-    const completo = await comPrazo(cadastroEstaCompleto(supabase, user.id));
-    // Mesmo cuidado: erro (null) ou prazo estourado não é "cadastro incompleto".
-    if (completo === PRAZO_ESTOUROU || completo === null) return degradar();
+    // Só "completo" entra no crachá; "incompleto" nunca, para quem acabou de
+    // concluir o cadastro passar na hora.
+    if (!cracha?.completo) {
+      const completo = await comPrazo(cadastroEstaCompleto(supabase, user.id));
+      // Mesmo cuidado: erro (null) ou prazo estourado não é "cadastro incompleto".
+      if (completo === PRAZO_ESTOUROU || completo === null) return degradar();
 
-    if (!completo) return redirectTo(ENROLLMENT_ROUTE);
+      if (!completo) return redirectTo(ENROLLMENT_ROUTE);
+      await guardarCracha(user.id, false, true);
+    }
   }
 
   // Quem já está autenticado não precisa ver tela de login. Participantes vão
