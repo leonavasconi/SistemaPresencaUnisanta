@@ -30,6 +30,26 @@ Abra [http://localhost:3000](http://localhost:3000).
 > como seguro; acessar pelo IP da rede (`192.168.x.x`) em HTTP **não** — para
 > testar o check-in no celular, use um túnel HTTPS (`npx localtunnel --port 3000`).
 
+### Variável `SUPABASE_JWKS` (só no servidor)
+
+O app valida o token de login localmente, sem perguntar ao Supabase Auth, usando
+as chaves públicas do projeto. Por padrão ele busca essas chaves na rede a cada
+instância nova da função, o que no pico de check-in sobrecarrega o Auth. Para
+evitar isso, as chaves ficam numa variável de ambiente:
+
+- **Valor:** o JSON público de
+  `https://<projeto>.supabase.co/auth/v1/.well-known/jwks.json` (é público; não
+  é segredo), colado inteiro, em uma linha. Não use o prefixo `NEXT_PUBLIC_`.
+- **Onde:** Vercel → Settings → Environment Variables, nos ambientes **Production**
+  e **Preview**; em desenvolvimento, no `.env.local` (opcional).
+- **Quando atualizar:** sempre que a chave de assinatura JWT do projeto for
+  rotacionada (Supabase → Settings → JWT Keys). Abra a URL acima, copie o JSON
+  novo e substitua a variável, depois faça um novo deploy. Enquanto isso, tokens
+  assinados pela chave nova não estão na variável e o app volta a buscar as
+  chaves na rede (mais lento, mas sem erro).
+- **Ausente ou inválida:** o app funciona do mesmo jeito que antes, buscando o
+  JWKS na rede.
+
 O schema do banco está em `supabase/migrations/` e a Edge Function de
 check-in em `supabase/functions/checkin/`. Ambos precisam ser aplicados no
 projeto Supabase (`supabase db push` e `supabase functions deploy checkin`).
