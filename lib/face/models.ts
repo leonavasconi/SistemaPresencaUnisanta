@@ -1,4 +1,5 @@
 import * as faceapi from "face-api.js";
+import { aguardarPintura } from "@/lib/ui/aguardarPintura";
 
 const MODEL_URL = "/models";
 let modelsLoadedPromise: Promise<void> | null = null;
@@ -12,6 +13,52 @@ export function loadFaceModels(): Promise<void> {
     ]).then(() => undefined);
   }
   return modelsLoadedPromise;
+}
+
+let aquecimento: Promise<void> | null = null;
+
+/**
+ * Aquece o TF.js: roda uma passada em cada rede sobre um canvas pequeno em
+ * branco para compilar os shaders do WebGL, que é o que torna a PRIMEIRA
+ * detecção muito mais lenta que as seguintes (os programas ficam em cache).
+ *
+ * Uma detecção comum num canvas em branco não acharia rosto e nunca chegaria às
+ * redes de pontos e de descritor, então cada rede é chamada diretamente. O
+ * tamanho do canvas não importa: cada rede redimensiona a entrada para o
+ * tamanho que usa de verdade.
+ *
+ * Roda uma vez por página, sem ser esperada por quem chama: ignora o resultado
+ * e os erros (aquecer é opcional e nunca pode virar erro na tela) e cede ao
+ * navegador entre as redes, para não segurar a thread principal de uma vez só.
+ */
+export function aquecerModelos(): void {
+  if (aquecimento) return;
+
+  aquecimento = (async () => {
+    try {
+      await loadFaceModels();
+
+      const canvas = document.createElement("canvas");
+      canvas.width = 160;
+      canvas.height = 160;
+      const contexto = canvas.getContext("2d");
+      if (contexto) {
+        contexto.fillStyle = "#808080";
+        contexto.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      await faceapi.nets.tinyFaceDetector.locateFaces(
+        canvas,
+        new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }),
+      );
+      await aguardarPintura();
+      await faceapi.nets.faceLandmark68Net.detectLandmarks(canvas);
+      await aguardarPintura();
+      await faceapi.nets.faceRecognitionNet.computeFaceDescriptor(canvas);
+    } catch {
+      // Aquecer é só otimização: se falhar, a primeira captura apenas demora mais.
+    }
+  })();
 }
 
 function isFaceWellFramed(
