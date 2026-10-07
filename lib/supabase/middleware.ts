@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { ENROLLMENT_COLUMNS, isEnrollmentComplete } from "@/lib/enrollment";
+import { cadastroEstaCompleto } from "@/lib/enrollment";
 import { getSessionState } from "@/lib/supabase/auth";
 import { paginaSistemaOcupado } from "@/lib/supabase/sistema-ocupado";
 
@@ -180,13 +180,11 @@ export async function updateSession(request: NextRequest) {
   // Sem esta checagem, bastava voltar uma página no navegador depois de criar
   // a conta para cair em /eventos com o cadastro pela metade.
   if (!isAdmin && (isParticipantRoute || isParticipantAuth) && !path.startsWith(ENROLLMENT_ROUTE)) {
-    const cadastro = await comPrazo(
-      supabase.from("participantes").select(ENROLLMENT_COLUMNS).eq("id", user.id).maybeSingle(),
-    );
-    // Mesmo cuidado: erro ou prazo estourado não é "cadastro incompleto".
-    if (cadastro === PRAZO_ESTOUROU || cadastro.error) return degradar();
+    const completo = await comPrazo(cadastroEstaCompleto(supabase, user.id));
+    // Mesmo cuidado: erro (null) ou prazo estourado não é "cadastro incompleto".
+    if (completo === PRAZO_ESTOUROU || completo === null) return degradar();
 
-    if (!isEnrollmentComplete(cadastro.data)) return redirectTo(ENROLLMENT_ROUTE);
+    if (!completo) return redirectTo(ENROLLMENT_ROUTE);
   }
 
   // Quem já está autenticado não precisa ver tela de login. Participantes vão

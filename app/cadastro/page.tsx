@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionUser } from "@/lib/supabase/auth";
-import { ENROLLMENT_COLUMNS, isEnrollmentComplete } from "@/lib/enrollment";
+import { cadastroEstaCompleto } from "@/lib/enrollment";
 import { CadastroWizard } from "./CadastroWizard";
 
 export default async function CadastroPage() {
@@ -11,13 +11,7 @@ export default async function CadastroPage() {
   if (user) {
     // Mesma regra usada pelo middleware (lib/enrollment.ts): quem já concluiu
     // não precisa repetir o consentimento nem a captura do rosto.
-    const { data: participante } = await supabase
-      .from("participantes")
-      .select(ENROLLMENT_COLUMNS)
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (isEnrollmentComplete(participante)) {
+    if ((await cadastroEstaCompleto(supabase, user.id)) === true) {
       redirect("/eventos");
     }
   }
