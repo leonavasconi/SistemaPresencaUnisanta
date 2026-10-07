@@ -1,5 +1,17 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+/** Tamanho do descritor facial do face-api.js; a RPC fazer_checkin também exige exatamente 128. */
+export const DESCRIPTOR_LENGTH = 128;
+
+/** Descritor aceitável: array de exatamente 128 números finitos. */
+export function descritorValido(descriptor: unknown): descriptor is number[] {
+  return (
+    Array.isArray(descriptor) &&
+    descriptor.length === DESCRIPTOR_LENGTH &&
+    descriptor.every((n) => typeof n === "number" && Number.isFinite(n))
+  );
+}
+
 /**
  * O que conta como "cadastro concluído" para um participante.
  *
