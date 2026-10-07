@@ -4,12 +4,17 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { parseEmail } from "@/lib/validation/email";
 import { traduzErroAuth } from "@/lib/auth/errors";
+import { esquecerEmailDeLogin, lembrarEmailDeLogin } from "@/lib/auth/login-email";
 
 function falhou(mensagem: string): never {
   redirect(`/admin/entrar?error=${encodeURIComponent(mensagem)}`);
 }
 
 export async function adminSignIn(formData: FormData) {
+  // Guardado antes de qualquer validação: se algo falhar, a tela volta com o
+  // e-mail preenchido e só a senha em branco.
+  await lembrarEmailDeLogin(String(formData.get("email") ?? "").trim(), "/admin/entrar");
+
   const { email, error: emailError } = parseEmail(formData.get("email"));
   if (emailError) falhou(emailError);
 
@@ -34,5 +39,6 @@ export async function adminSignIn(formData: FormData) {
     falhou("Esta conta não tem acesso ao painel de administrador.");
   }
 
+  await esquecerEmailDeLogin("/admin/entrar");
   redirect("/admin/events");
 }
