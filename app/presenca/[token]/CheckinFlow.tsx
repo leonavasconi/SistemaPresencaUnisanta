@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, CheckCircle2, AlertTriangle, XCircle, MapPin, ScanFace } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getDeviceFingerprint } from "@/lib/device/fingerprint";
+import { aguardarPintura } from "@/lib/ui/aguardarPintura";
 import { FaceCapture } from "@/components/FaceCapture";
 import { PageBackground } from "@/components/ui/PageBackground";
 import { Button } from "@/components/ui/Button";
@@ -224,6 +225,9 @@ export function CheckinFlow({
     abortRef.current = controller;
     setAttempt(1);
     setStage("enviando");
+    // Deixa o navegador pintar "Validando presença..." antes do trabalho que
+    // segue. Ver lib/ui/aguardarPintura.ts.
+    await aguardarPintura();
 
     try {
       const supabase = createClient();

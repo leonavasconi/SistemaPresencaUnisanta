@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Camera, Loader2, RefreshCw } from "lucide-react";
-import { loadFaceModels, extractFaceDescriptor } from "@/lib/face/models";
+import { loadFaceModels, extractFaceDescriptor, aquecerModelos } from "@/lib/face/models";
+import { aguardarPintura } from "@/lib/ui/aguardarPintura";
 import { Button } from "@/components/ui/Button";
 import { PermissionModal } from "@/components/ui/PermissionModal";
 
@@ -37,7 +38,7 @@ export function FaceCapture({
         if (cancelled) return;
 
         setStatus("starting-camera");
-        const stream = await navigator.mediaDevices.getUserMedia({
+        const streamPromise = navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: { ideal: "user" },
             width: { ideal: 1280 },
@@ -45,6 +46,11 @@ export function FaceCapture({
           },
           audio: false,
         });
+        // Aquece o TF.js (compila os shaders do WebGL) enquanto a câmera abre
+        // e o aluno decide a permissão, para a primeira captura de verdade não
+        // pagar esse custo. Não é esperado: nunca atrasa nem derruba o "ready".
+        aquecerModelos();
+        const stream = await streamPromise;
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
           return;
@@ -90,6 +96,9 @@ export function FaceCapture({
     if (!videoRef.current || status !== "ready") return;
     setStatus("processing");
     setErrorMessage(null);
+    // A detecção roda na thread principal e trava a tela; sem esperar a pintura
+    // o "Analisando..." nunca aparece. Ver lib/ui/aguardarPintura.ts.
+    await aguardarPintura();
 
     const descriptor = await extractFaceDescriptor(videoRef.current);
     if (!descriptor) {
