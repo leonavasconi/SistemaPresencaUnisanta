@@ -1,6 +1,24 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { isAuthRetryableFetchError, type SupabaseClient } from "@supabase/supabase-js";
 
 export type SessionUser = { id: string; email?: string };
+
+/**
+ * Resultado de olhar a sessão. "Sem sessão" e "o Auth não respondeu" são coisas
+ * diferentes: a primeira é logout de verdade; a segunda é uma falha nossa e não
+ * pode derrubar quem está logado nem empurrar o aluno de volta para o login.
+ */
+export type SessionState =
+  | { status: "authenticated"; user: SessionUser }
+  | { status: "anonymous" }
+  | { status: "unavailable" };
+
+/** Lançado por getSessionUser quando não dá para saber se há sessão (Auth fora do ar). */
+export class SessaoIndisponivelError extends Error {
+  constructor() {
+    super("Não foi possível verificar a sessão: o serviço de autenticação não respondeu.");
+    this.name = "SessaoIndisponivelError";
+  }
+}
 
 type ClaimsOptions = NonNullable<Parameters<SupabaseClient["auth"]["getClaims"]>[1]>;
 type Jwks = NonNullable<ClaimsOptions["jwks"]>;
@@ -36,8 +54,15 @@ function jwksDoAmbienteOuUndefined(): Jwks | undefined {
   return jwksDoAmbiente ?? undefined;
 }
 
+/** Erro de rede, timeout ou 5xx do Auth — o serviço está ruim, não é a sessão que é inválida. */
+function authIndisponivel(error: unknown): boolean {
+  if (isAuthRetryableFetchError(error)) return true;
+  const status = (error as { status?: unknown } | null)?.status;
+  return typeof status === "number" && status >= 500;
+}
+
 /**
- * Identifica o usuário da sessão a partir do JWT, sem ir ao servidor de Auth.
+ * Olha a sessão a partir do JWT, sem ir ao servidor de Auth (quando possível).
  *
  * `getUser()` faz uma requisição ao Supabase Auth a cada chamada. Em pico
  * (centenas de alunos abrindo o check-in no mesmo minuto) isso derrubou o
@@ -48,15 +73,40 @@ function jwksDoAmbienteOuUndefined(): Jwks | undefined {
  * Use `getUser()` apenas onde for preciso saber se a sessão foi revogada
  * agora (ações sensíveis e pouco frequentes, como excluir dados).
  */
+export async function getSessionState(
+  supabase: { auth: SupabaseClient["auth"] },
+): Promise<SessionState> {
+  try {
+    const { data, error } = await supabase.auth.getClaims(undefined, {
+      jwks: jwksDoAmbienteOuUndefined(),
+    });
+    if (error) return authIndisponivel(error) ? { status: "unavailable" } : { status: "anonymous" };
+
+    const sub = data?.claims?.sub;
+    if (typeof sub !== "string" || sub.length === 0) return { status: "anonymous" };
+
+    const email = data?.claims?.email;
+    return {
+      status: "authenticated",
+      user: { id: sub, email: typeof email === "string" ? email : undefined },
+    };
+  } catch (error) {
+    // Falha que o getClaims não classificou: por segurança, não desloga ninguém.
+    console.error("getSessionState:", error instanceof Error ? error.name : "erro desconhecido");
+    return { status: "unavailable" };
+  }
+}
+
+/**
+ * Usuário da sessão, ou `null` quando não há sessão. Se o Auth está fora do ar
+ * lança `SessaoIndisponivelError` em vez de devolver `null`: tratar a falha
+ * como "deslogado" mandaria o aluno para /entrar e geraria mais logins
+ * exatamente quando o Auth está sobrecarregado.
+ */
 export async function getSessionUser(
   supabase: { auth: SupabaseClient["auth"] },
 ): Promise<SessionUser | null> {
-  const { data, error } = await supabase.auth.getClaims(undefined, {
-    jwks: jwksDoAmbienteOuUndefined(),
-  });
-  const sub = data?.claims?.sub;
-  if (error || typeof sub !== "string" || sub.length === 0) return null;
-
-  const email = data?.claims?.email;
-  return { id: sub, email: typeof email === "string" ? email : undefined };
+  const state = await getSessionState(supabase);
+  if (state.status === "unavailable") throw new SessaoIndisponivelError();
+  return state.status === "authenticated" ? state.user : null;
 }

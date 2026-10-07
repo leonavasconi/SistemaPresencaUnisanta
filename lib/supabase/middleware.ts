@@ -1,7 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { ENROLLMENT_COLUMNS, isEnrollmentComplete } from "@/lib/enrollment";
-import { getSessionUser } from "@/lib/supabase/auth";
+import { getSessionState } from "@/lib/supabase/auth";
+import { paginaSistemaOcupado } from "@/lib/supabase/sistema-ocupado";
 
 /** Onde o participante conclui consentimento e biometria. */
 const ENROLLMENT_ROUTE = "/cadastro";
@@ -49,7 +50,7 @@ export async function updateSession(request: NextRequest) {
 
   // Valida o JWT localmente (sem ir ao servidor de Auth) e renova os cookies
   // de sessão quando o token expira. Ver lib/supabase/auth.ts.
-  const user = await getSessionUser(supabase);
+  const session = await getSessionState(supabase);
 
   const path = request.nextUrl.pathname;
 
@@ -84,6 +85,30 @@ export async function updateSession(request: NextRequest) {
   const isAdminProtected = isAdminArea && path !== ADMIN_LOGIN;
   const isParticipantRoute = PARTICIPANT_ROUTES.some((p) => path.startsWith(p));
   const isParticipantAuth = PARTICIPANT_AUTH_ROUTES.some((p) => path.startsWith(p));
+  const isProtected = isAdminProtected || isParticipantRoute;
+
+  /**
+   * Auth ou banco lentos/fora do ar: não é motivo para deslogar nem para
+   * redirecionar ninguém (mandar o aluno para /entrar geraria mais logins no
+   * pior momento). Rota protegida recebe uma página leve de "sistema ocupado"
+   * (503, sem redirect, então sem loop); rota pública segue normalmente.
+   */
+  function degradar() {
+    if (!isProtected) return semCache(response);
+    const ocupado = new NextResponse(paginaSistemaOcupado(), {
+      status: 503,
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store, must-revalidate",
+        "Retry-After": "5",
+      },
+    });
+    response.cookies.getAll().forEach((cookie) => ocupado.cookies.set(cookie));
+    return ocupado;
+  }
+
+  if (session.status === "unavailable") return degradar();
+  const user = session.status === "authenticated" ? session.user : null;
 
   if (isAdminProtected && !user) return redirectTo(ADMIN_LOGIN);
   if (isParticipantRoute && !user) return redirectTo("/entrar");
@@ -94,11 +119,14 @@ export async function updateSession(request: NextRequest) {
     return semCache(response);
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("perfis")
     .select("id")
     .eq("id", user.id)
     .maybeSingle();
+  // Erro na consulta (timeout, banco lento) não é "não é admin": sem esta
+  // checagem o participante seria tratado como não-admin e redirecionado.
+  if (profileError) return degradar();
   const isAdmin = !!profile;
 
   // Sessão sem perfil de administrador não entra na área administrativa,
@@ -114,11 +142,13 @@ export async function updateSession(request: NextRequest) {
   // Sem esta checagem, bastava voltar uma página no navegador depois de criar
   // a conta para cair em /eventos com o cadastro pela metade.
   if (!isAdmin && (isParticipantRoute || isParticipantAuth) && !path.startsWith(ENROLLMENT_ROUTE)) {
-    const { data: participante } = await supabase
+    const { data: participante, error: participanteError } = await supabase
       .from("participantes")
       .select(ENROLLMENT_COLUMNS)
       .eq("id", user.id)
       .maybeSingle();
+    // Mesmo cuidado: erro de consulta não é "cadastro incompleto".
+    if (participanteError) return degradar();
 
     if (!isEnrollmentComplete(participante)) return redirectTo(ENROLLMENT_ROUTE);
   }
