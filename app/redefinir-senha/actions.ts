@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { apagarCrachaDeAcesso } from "@/lib/supabase/acesso-cache-server";
 import { traduzErroAuth, validatePassword } from "@/lib/auth/errors";
 
 function falhou(mensagem: string): never {
@@ -51,6 +52,7 @@ export async function updatePassword(formData: FormData) {
   // Encerra a sessão temporária criada pelo link: a partir daqui o acesso é
   // pela senha nova, o que também invalida o link de recuperação já usado.
   await supabase.auth.signOut();
+  await apagarCrachaDeAcesso();
 
   redirect(
     `${destino}?mensagem=${encodeURIComponent("Senha alterada. Entre com sua nova senha.")}`,

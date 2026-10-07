@@ -1,7 +1,9 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { apagarCrachaDeAcesso } from "@/lib/supabase/acesso-cache-server";
 import { CONSENT_VERSION } from "@/lib/consent";
+import { descritorValido } from "@/lib/enrollment";
 
 export type EnrollmentInput = {
   descriptor: number[];
@@ -16,6 +18,13 @@ export async function saveEnrollment(input: EnrollmentInput) {
 
   if (!user) {
     return { error: "Sessão expirada. Faça login novamente." };
+  }
+
+  // O descritor vem do navegador. Sem esta checagem, um array vazio ou de
+  // tamanho errado seria gravado como se fosse biometria; o check-in o recusaria
+  // depois (a RPC exige 128), mas o cadastro já teria sido dado como concluído.
+  if (!descritorValido(input.descriptor)) {
+    return { error: "A captura não ficou boa. Tente novamente." };
   }
 
   const now = new Date().toISOString();
@@ -62,6 +71,10 @@ export async function saveEnrollment(input: EnrollmentInput) {
     acao: "concedido",
     endereco_ip: ip,
   });
+
+  // O cadastro acabou de ser concluído. "Incompleto" nunca entra no crachá,
+  // mas apagar garante que nenhum crachá antigo contradiga o estado novo.
+  await apagarCrachaDeAcesso();
 
   return { error: null };
 }

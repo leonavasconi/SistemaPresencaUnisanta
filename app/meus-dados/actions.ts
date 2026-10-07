@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { apagarCrachaDeAcesso } from "@/lib/supabase/acesso-cache-server";
 import { getSessionUser } from "@/lib/supabase/auth";
 import { CONSENT_VERSION } from "@/lib/consent";
 
@@ -91,6 +92,8 @@ export async function deleteMyData() {
     acao: "revogado",
   });
 
+  // O estado mudou (volta a exigir cadastro): o crachá de acesso não vale mais.
+  await apagarCrachaDeAcesso();
   await supabase.auth.signOut();
   redirect("/");
 }
