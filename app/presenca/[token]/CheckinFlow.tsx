@@ -26,8 +26,6 @@ type Stage =
 const REJECTION_MESSAGES: Record<string, string> = {
   checkpoint_nao_encontrado: "QR Code inválido ou expirado.",
   fora_da_janela_de_horario: "Este momento de presença não está aberto agora.",
-  janela_conflitante_outro_evento:
-    "Você já registrou presença em outro evento com horário conflitante com este momento.",
   evento_nao_encontrado: "Evento não encontrado.",
   area_nao_configurada:
     "Este evento ainda não teve sua área de check-in configurada. Procure o organizador.",
